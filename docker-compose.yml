@@ -19,8 +19,6 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
       - 3000:3000
-    volumes:
-      - .:/usr/src/app
     command: ['npm', 'run', 'dev']
   redis:
     image: 'redis:alpine'
