@@ -1,0 +1,13 @@
+FROM node:16-alpine
+
+WORKDIR /usr/src/app
+
+COPY ["package.json", "package-lock.json*", "./"]
+
+RUN npm install -g typescript
+RUN npm ci
+
+COPY ./src ./src
+
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
