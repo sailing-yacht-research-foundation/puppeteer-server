@@ -1,3 +1,4 @@
+import IORedis from 'ioredis';
 import Redis from 'ioredis';
 
 let bullClient: Redis.Redis;
@@ -44,3 +45,18 @@ export const newConnection = (redisOptions: Redis.RedisOptions) => {
 };
 export const getBullClient = () => bullClient;
 export const getBullSubscriber = () => bullSubscriber;
+
+export function createClient(
+  type: 'client' | 'subscriber' | 'bclient',
+  redisOpts: IORedis.RedisOptions,
+) {
+  switch (type) {
+    case 'subscriber':
+      return getBullSubscriber();
+    case 'bclient':
+      return newConnection(redisOpts);
+    case 'client':
+    default:
+      return getBullClient();
+  }
+}
