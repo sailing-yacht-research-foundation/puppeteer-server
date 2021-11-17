@@ -6,10 +6,21 @@ import { uploadMapScreenshot } from '../externalServices/s3';
 import { createMapScreenshot } from '../utils/createMapScreenshot';
 import logger from '../logger';
 
+type CompetitionOGJobData = {
+  type: 'competition-unit';
+  idList: string[];
+  position: [number, number];
+};
+type EventOGJobData = {
+  type: 'event';
+  id: string;
+  position: [number, number];
+};
+type OGJobData = EventOGJobData | CompetitionOGJobData;
+
 var openGraphQueue: Bull.Queue<any>;
 
-// TODO: Type the any
-export const eventWorker = async (job: Bull.Job<any>) => {
+export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
   const { id, position } = job.data || {};
 
   if (!id || !position) return;
@@ -23,13 +34,14 @@ export const eventWorker = async (job: Bull.Job<any>) => {
   // await dataAccess.addOpenGraph(id, response.Location);
 };
 
-// TODO: Type the any
-export const competitionUnitWorker = async (job: Bull.Job<any>) => {
-  const { idList = [], centerPoint } = job.data || {};
+export const competitionUnitWorker = async (
+  job: Bull.Job<CompetitionOGJobData>,
+) => {
+  const { idList = [], position } = job.data || {};
   const transaction = await db.sequelize.transaction();
 
   try {
-    const imageBuffer = await createMapScreenshot(centerPoint);
+    const imageBuffer = await createMapScreenshot(position);
     // TODO:
     // await Promise.all(
     //   // Loop for multiple competitions with same course
@@ -55,14 +67,13 @@ export const competitionUnitWorker = async (job: Bull.Job<any>) => {
   }
 };
 
-// TODO: Type the any
-export const worker = async (job: Bull.Job<any>) => {
+export const worker = async (job: Bull.Job<OGJobData>) => {
   switch (job.data.type) {
     case 'event':
-      await exports.eventWorker(job);
+      await eventWorker(job as Bull.Job<EventOGJobData>);
       break;
     case 'competition-unit':
-      await exports.competitionUnitWorker(job);
+      await competitionUnitWorker(job as Bull.Job<CompetitionOGJobData>);
       break;
     default:
       break;
@@ -71,7 +82,7 @@ export const worker = async (job: Bull.Job<any>) => {
 export const setup = (opts: Bull.QueueOptions) => {
   openGraphQueue = new Bull(bullQueues.openGraph, opts);
 
-  openGraphQueue.process(1, exports.worker);
+  openGraphQueue.process(1, worker);
 
   openGraphQueue.on('failed', (job, err) => {
     logger.error(
@@ -83,38 +94,18 @@ export const setup = (opts: Bull.QueueOptions) => {
   });
 };
 
-export const addEvent = async (
-  data: any, // TODO: Type this
+export const addJob = async (
+  data: OGJobData,
   opts?: Bull.JobOptions & { jobId?: string },
 ) => {
   if (opts?.jobId) {
     await openGraphQueue.removeJobs(opts.jobId);
   }
-  await openGraphQueue.add(
-    { ...data, type: 'event' },
-    {
-      removeOnFail: true,
-      removeOnComplete: true,
-      ...opts,
-    },
-  );
-};
-
-export const addCompetitionUnit = async (
-  data: any,
-  opts: Bull.JobOptions & { jobId?: string },
-) => {
-  if (opts.jobId) {
-    await openGraphQueue.removeJobs(opts.jobId);
-  }
-  await openGraphQueue.add(
-    { ...data, type: 'competition-unit' },
-    {
-      removeOnFail: true,
-      removeOnComplete: true,
-      ...opts,
-    },
-  );
+  await openGraphQueue.add(data, {
+    removeOnFail: true,
+    removeOnComplete: true,
+    ...opts,
+  });
 };
 
 export const removeJob = async (jobId: string) => {

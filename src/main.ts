@@ -6,7 +6,7 @@ import { connect as redisConnect } from './redis';
 import db from './models';
 import logger from './logger';
 import { registerBGWorkers } from './jobs';
-// import * as ogJob from './jobs/openGraph';
+import * as ogJob from './jobs/openGraph';
 
 const port = process.env.PORT || 3000;
 
@@ -28,12 +28,18 @@ const port = process.env.PORT || 3000;
     });
     app.listen(port, () => {
       logger.info(`Puppeteer Server has started! Listening on ${port}`);
-      // setTimeout(() => {
-      //   ogJob.addEvent({
-      //     id: 'test',
-      //     position: [108.6328125, -5.615985819155327],
-      //   });
-      // }, 5000);
+      setTimeout(() => {
+        ogJob.addJob({
+          type: 'event',
+          id: 'test',
+          position: [108.6328125, -5.615985819155327],
+        });
+        ogJob.addJob({
+          type: 'competition-unit',
+          idList: ['test'],
+          position: [108.6328125, -5.615985819155327],
+        });
+      }, 5000);
     });
   } catch (error) {
     logger.error(
