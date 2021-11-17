@@ -56,3 +56,12 @@ export interface CompetitionUnitInterface extends Model {
   city?: string;
   status?: string;
 }
+
+export type ExternalServicesSourceEnum = 'YACHTSCORING';
+export interface ExternalServiceCredentialInterface extends Model {
+  id: string;
+  userProfileId: string;
+  source: ExternalServicesSourceEnum;
+  userId: string;
+  password: string;
+}

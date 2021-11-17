@@ -2,10 +2,12 @@ import { ModelCtor, Sequelize } from 'sequelize';
 
 import calendarEventModel from './syrf-schema/entities/CalendarEvent';
 import competitionUnitModel from './syrf-schema/entities/CompetitionUnit';
+import externalServiceCredentialModel from './syrf-schema/entities/ExternalServiceCredential';
 
 import {
   CalendarEventInterface,
   CompetitionUnitInterface,
+  ExternalServiceCredentialInterface,
 } from '../types/Model-Type';
 import logger from '../logger';
 
@@ -35,6 +37,7 @@ const db: {
   startDB: () => Promise<void>;
   calendarEvent: ModelCtor<CalendarEventInterface>;
   competitionUnit: ModelCtor<CompetitionUnitInterface>;
+  externalServiceCredential: ModelCtor<ExternalServiceCredentialInterface>;
 } = {
   sequelize,
   calendarEvent: calendarEventModel(
@@ -43,6 +46,9 @@ const db: {
   competitionUnit: competitionUnitModel(
     sequelize,
   ) as unknown as ModelCtor<CompetitionUnitInterface>,
+  externalServiceCredential: externalServiceCredentialModel(
+    sequelize,
+  ) as unknown as ModelCtor<ExternalServiceCredentialInterface>,
   startDB: async () => {
     await sequelize.authenticate();
     logger.info(`Main DB Connected!`);

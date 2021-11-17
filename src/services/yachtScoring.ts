@@ -9,7 +9,7 @@ const YS_LOGIN_TIMEOUT = 5000;
 export const testCredentials = async (user: string, password: string) => {
   logger.info('YachtScoring.com Login process started');
   const browser = await puppeteer.launch({
-    headless: false, // open this for testing
+    // headless: false, // open this for testing
     ignoreHTTPSErrors: true,
     args: [
       '--no-sandbox',
@@ -56,6 +56,10 @@ export const testCredentials = async (user: string, password: string) => {
   } finally {
     await browser.close();
   }
-  logger.info('YachtScoring.com Login process finished');
+  logger.info(
+    `YachtScoring.com Login process finished. Result: ${
+      isSuccessful ? 'Success' : 'Fail'
+    }`,
+  );
   return isSuccessful;
 };
