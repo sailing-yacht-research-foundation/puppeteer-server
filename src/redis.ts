@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 
-let bullClient: Redis.Redis | null = null;
-let bullSubscriber: Redis.Redis | null = null;
+let bullClient: Redis.Redis;
+let bullSubscriber: Redis.Redis;
 
 let opt: Redis.RedisOptions = {
   maxRetriesPerRequest: null,

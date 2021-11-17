@@ -85,9 +85,9 @@ export const setup = (opts: Bull.QueueOptions) => {
 
 export const addEvent = async (
   data: any, // TODO: Type this
-  opts: Bull.JobOptions & { jobId?: string },
+  opts?: Bull.JobOptions & { jobId?: string },
 ) => {
-  if (opts.jobId) {
+  if (opts?.jobId) {
     await openGraphQueue.removeJobs(opts.jobId);
   }
   await openGraphQueue.add(

@@ -2,6 +2,6 @@ import Bull from 'bull';
 
 import * as ogJob from './openGraph';
 
-exports.registerWorkers = (opts: Bull.QueueOptions) => {
+export const registerWorkers = (opts: Bull.QueueOptions) => {
   ogJob.setup(opts);
 };

@@ -14,6 +14,7 @@ const LOGO_MARGIN_PERCENTAGE = 0.05;
 const LOGO_SIZE_PERCENTAGE = 0.1;
 
 export const createMapScreenshot = async (centerPosition: [number, number]) => {
+  console.log('IMAGE CREATION TRIGGERED: ', centerPosition);
   const mapboxId = process.env.MAPBOX_ID;
   const accessToken = process.env.MAPBOX_API_KEY;
   if (mapboxId === undefined || accessToken === undefined) {
@@ -80,6 +81,7 @@ export const createMapScreenshot = async (centerPosition: [number, number]) => {
   }
 
   await browser.close();
+  console.log('IMAGE CREATION COMPLETED: ', centerPosition);
   return finalImageBuffer;
 };
 
