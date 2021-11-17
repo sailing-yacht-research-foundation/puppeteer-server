@@ -1,7 +1,7 @@
 import winston from 'winston';
 import path from 'path';
 const { createLogger, format, transports } = winston;
-const { combine, timestamp, printf, colorize } = format;
+const { combine, timestamp, printf, colorize, errors } = format;
 
 const logFormat = printf(({ level, message, service, timestamp }) => {
   return `${timestamp} [${service}] ${level}: ${message}`;
@@ -15,7 +15,7 @@ winston.addColors({
 });
 
 const logger = createLogger({
-  format: combine(timestamp(), logFormat),
+  format: combine(errors({ stack: true }), timestamp(), logFormat),
   defaultMeta: { service: 'puppeteer-service' },
   exceptionHandlers: [
     new transports.File({ filename: `${logFolder}/exceptions.log` }),

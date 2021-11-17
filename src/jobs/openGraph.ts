@@ -23,47 +23,62 @@ var openGraphQueue: Bull.Queue<any>;
 export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
   const { id, position } = job.data || {};
 
-  if (!id || !position) return;
+  if (!id || !position) {
+    logger.error(
+      `OG Job (Event) Skipped, data incomplete. ID: ${id} | position: ${position}`,
+    );
+    return;
+  }
 
-  const imageBuffer = await createMapScreenshot(position);
-  const response = await uploadMapScreenshot(
-    imageBuffer,
-    `calendar-event/${id}.jpg`,
-  );
-  // TODO: Test if we can use the dataAccess. Probably not since using typed models
-  // await dataAccess.addOpenGraph(id, response.Location);
+  try {
+    const imageBuffer = await createMapScreenshot(position);
+    const response = await uploadMapScreenshot(
+      imageBuffer,
+      `calendar-event/${id}.jpg`,
+    );
+    if (response) {
+      await db.calendarEvent.update(
+        { openGraphImage: response.Location },
+        {
+          where: {
+            id,
+          },
+        },
+      );
+    }
+  } catch (error) {
+    logger.error('Failed to generate OG For Event:', error);
+  }
 };
 
 export const competitionUnitWorker = async (
   job: Bull.Job<CompetitionOGJobData>,
 ) => {
   const { idList = [], position } = job.data || {};
-  const transaction = await db.sequelize.transaction();
 
   try {
     const imageBuffer = await createMapScreenshot(position);
-    // TODO:
-    // await Promise.all(
-    //   // Loop for multiple competitions with same course
-    //   idList.map(async (id) => {
-    //     const response = await uploadMapScreenshot(
-    //       imageBuffer,
-    //       `competition/${id}.jpg`,
-    //     );
-    //     const openGraphImage = response.Location;
-    //     await competitionUnitDataAccess.addOpenGraphImage(
-    //       idList,
-    //       {
-    //         openGraphImage,
-    //       },
-    //       transaction,
-    //     );
-    //   }),
-    // );
-    await transaction.commit();
-  } catch (err) {
-    await transaction.rollback();
-    throw err;
+
+    const data = await Promise.all(
+      // Loop for multiple competitions with same course
+      // Note: Intended to separate the image files for each competition even if the image is identical
+      idList.map(async (id) => {
+        const response = await uploadMapScreenshot(
+          imageBuffer,
+          `competition/${id}.jpg`,
+        );
+        return {
+          id,
+          openGraphImage: response?.Location,
+        };
+      }),
+    );
+    await db.competitionUnit.bulkCreate(data, {
+      fields: ['id', 'openGraphImage'],
+      updateOnDuplicate: ['openGraphImage'],
+    });
+  } catch (error) {
+    logger.error('Failed to generate OG For Competitions:', error);
   }
 };
 
