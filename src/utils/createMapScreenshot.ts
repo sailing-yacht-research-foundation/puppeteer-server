@@ -27,6 +27,10 @@ export const createMapScreenshot = async (centerPosition: [number, number]) => {
       '--no-sandbox',
       '--disable-dev-shm-usage',
       `--window-size=${OG_WIDTH},${OG_HEIGHT}`,
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-setuid-sandbox',
+      '--disable-gpu',
     ],
     defaultViewport: {
       width: OG_WIDTH,
