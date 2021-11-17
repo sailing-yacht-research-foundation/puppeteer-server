@@ -1,5 +1,7 @@
 # puppeteer-server
 
+A service that will handle puppeteer related tasks to offload the burden from LDS
+
 ---
 
 - [puppeteer-server](#puppeteer-server)
