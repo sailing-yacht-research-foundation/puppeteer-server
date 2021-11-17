@@ -6,8 +6,6 @@ import {
   bullQueues,
   externalServiceSources,
 } from '../models/syrf-schema/enums';
-import { uploadMapScreenshot } from '../externalServices/s3';
-import { createMapScreenshot } from '../utils/createMapScreenshot';
 import { testCredentials } from '../services/yachtScoring';
 
 type YachtScoringTestCredentialsData = {
@@ -19,7 +17,7 @@ type YachtScoringTestCredentialsData = {
 
 type YachtScoringJobData = YachtScoringTestCredentialsData;
 
-var yachtScoringQueue: Bull.Queue<any>;
+var yachtScoringQueue: Bull.Queue<YachtScoringJobData>;
 
 export const testCredentialsWorker = async (
   job: Bull.Job<YachtScoringJobData>,
@@ -32,21 +30,24 @@ export const testCredentialsWorker = async (
         password == null ? 'null/undefined' : ''
       } | userProfileId: ${userProfileId}`,
     );
-    return;
+    return false;
   }
 
+  let isSuccessful = false;
   try {
-    const isSuccessful = await testCredentials(user, password);
+    isSuccessful = await testCredentials(user, password);
     if (isSuccessful) {
-      await db.externalServiceCredential.upsert(
+      await db.externalServiceCredential.bulkCreate(
+        [
+          {
+            userProfileId,
+            source: externalServiceSources.yachtscoring,
+            userId: user,
+            password: '*****222', // TODO: Encrypt this
+          },
+        ],
         {
-          userProfileId,
-          source: externalServiceSources.yachtscoring,
-          userId: user,
-          password: '*****', // TODO: Encrypt this
-        },
-        {
-          fields: ['password'],
+          updateOnDuplicate: ['password', 'updatedAt'],
         },
       );
     } else {
@@ -55,21 +56,24 @@ export const testCredentialsWorker = async (
   } catch (error) {
     logger.error('Failed to test credentials For YachtScoring:', error);
   }
+  return isSuccessful;
 };
 
-export const worker = async (job: Bull.Job<YachtScoringJobData>) => {
+export const worker = async (
+  job: Bull.Job<YachtScoringJobData>,
+): Promise<boolean> => {
+  let jobResult = false;
   switch (job.data.type) {
     case 'test-credentials':
-      await testCredentialsWorker(
+      jobResult = await testCredentialsWorker(
         job as Bull.Job<YachtScoringTestCredentialsData>,
       );
       break;
-    default:
-      break;
   }
+  return jobResult;
 };
 export const setup = (opts: Bull.QueueOptions) => {
-  yachtScoringQueue = new Bull(bullQueues.openGraph, opts);
+  yachtScoringQueue = new Bull(bullQueues.yachtScoringTestCredentials, opts);
   yachtScoringQueue.process(1, worker);
 
   yachtScoringQueue.on('failed', (job, err) => {
@@ -91,7 +95,7 @@ export const addJob = async (
   if (opts?.jobId) {
     await yachtScoringQueue.removeJobs(opts.jobId);
   }
-  await yachtScoringQueue.add(data, {
+  return await yachtScoringQueue.add(data, {
     removeOnFail: true,
     removeOnComplete: true,
     ...opts,
