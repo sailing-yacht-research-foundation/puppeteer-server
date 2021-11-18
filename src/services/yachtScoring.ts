@@ -8,18 +8,18 @@ const YS_LOGIN_PAGE = 'https://yachtscoring.com/admin_login.cfm';
 const YS_LOGIN_INPUT_USER = 'loginuser';
 const YS_LOGIN_INPUT_PASS = 'loginpass';
 const YS_LOGIN_TIMEOUT = 5000;
+const YS_MAIN_TABLE_LOGGED_IN_SELECTOR =
+  'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr';
+const YS_YACHT_TABLE_SELECTOR =
+  'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table:nth-child(2) > tbody > tr';
 
-export const testCredentials = async (user: string, password: string) => {
-  logger.info('YachtScoring.com Login process started');
-  const browser = await launchBrowser();
+export const loginProcess = async (
+  page: puppeteer.Page,
+  credentials: { user: string; password: string },
+) => {
+  const { user, password } = credentials;
   let isSuccessful = false;
-  let page: puppeteer.Page | undefined;
   try {
-    page = await browser.newPage();
-    if (!page) {
-      throw new Error('Page failed to initialize');
-    }
-
     await page.goto(YS_LOGIN_PAGE);
     await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_USER}]`);
     await page.type(`input[name=${YS_LOGIN_INPUT_USER}]`, user, { delay: 20 });
@@ -32,17 +32,31 @@ export const testCredentials = async (user: string, password: string) => {
       page.click('input[type="submit"]'),
     ]);
     const loginResultHtml = await page.$eval(
-      'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr',
+      YS_MAIN_TABLE_LOGGED_IN_SELECTOR,
       (element) => {
         return element.innerHTML;
       },
     );
-
     isSuccessful = loginResultHtml.includes(
       'Select the event you would like to work with',
     );
   } catch (error) {
     logger.error(`Failed to login to YS (user: ${user}) - `, error);
+  }
+
+  return isSuccessful;
+};
+
+export const testCredentials = async (user: string, password: string) => {
+  logger.info('YachtScoring.com Login process started');
+  const browser = await launchBrowser();
+  let isSuccessful = false;
+  let page: puppeteer.Page | undefined;
+  try {
+    page = await browser.newPage();
+    isSuccessful = await loginProcess(page, { user, password });
+  } catch (error) {
+    logger.error(`Unexpected error - yachtScoring.testCredentials - `, error);
   } finally {
     closePageAndBrowser({ page, browser });
   }
@@ -57,49 +71,32 @@ export const testCredentials = async (user: string, password: string) => {
 // F(x) belows are WIP. Not clear how we will store the data, so this function works, but still rough draft
 
 export const fetchEvents = async (user: string, password: string) => {
-  logger.info('YachtScoring.com fetch process started');
-  const browser = await puppeteer.launch({
-    headless: false, // open this for testing
-    ignoreHTTPSErrors: true,
-    args: [
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-setuid-sandbox',
-      '--disable-gpu',
-    ],
-  });
+  logger.info('YachtScoring.com fetch event process started');
+  const browser = await launchBrowser();
+  let page: puppeteer.Page | undefined;
+  let events: {
+    link: string | undefined;
+    eventId: string | undefined;
+    eventName: string;
+  }[] = [];
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
+    const isLoggedIn = await loginProcess(page, { user, password });
 
-    await page.goto(YS_LOGIN_PAGE);
-    await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_USER}]`);
-    await page.type(`input[name=${YS_LOGIN_INPUT_USER}]`, user, { delay: 20 });
-    await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_PASS}]`);
-    await page.type(`input[name=${YS_LOGIN_INPUT_PASS}]`, password, {
-      delay: 20,
-    });
-    await Promise.all([
-      page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
-      page.click('input[type="submit"]'),
-    ]);
-
+    if (!isLoggedIn) {
+      throw new Error('Failed to fetch events - Login Failed');
+    }
     const mainTableRows = await page.$$eval(
-      'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr',
+      YS_MAIN_TABLE_LOGGED_IN_SELECTOR,
       (rows) => {
         return Array.from(rows, (row) => {
           const columns = row.querySelectorAll('td');
-          // return columns;
           return Array.from(columns, (column) => column.innerHTML);
         });
       },
     );
-    if (mainTableRows.length === 0) {
-      throw new Error('Unable to get any events');
-    }
 
-    const events = mainTableRows
+    events = mainTableRows
       .filter((row) => {
         return !(row.length < 4 || !row[0].includes('Event_ID='));
       })
@@ -114,28 +111,12 @@ export const fetchEvents = async (user: string, password: string) => {
           eventName: $('a').text(),
         };
       });
-
-    console.table(events);
-    // === Quick Note selectors | Remove after dev
-    // selectors guide: https://api.jquery.com/category/selectors/
-    // = is exactly equal
-    // != is not equal
-    // ^= is starts with
-    // $= is ends with
-    // *= is contains
-    // ~= is contains word
-    // |= is starts with prefix (i.e., |= "prefix" matches "prefix-...")
-    // ===
-    await Promise.all([
-      page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
-      page.click('a[href$="12987"]'),
-    ]);
-    await page.waitForNetworkIdle({ idleTime: 5000 });
   } catch (error) {
     logger.error(`Failed to fetch events from YS (user: ${user}) - `, error);
   } finally {
-    await browser.close();
+    closePageAndBrowser({ page, browser });
   }
+  return events;
 };
 
 export const scrapeEventById = async (
@@ -184,6 +165,16 @@ export const scrapeEventById = async (
       throw new Error('Unable to get any events');
     }
 
+    // === Quick Note selectors | Remove after dev
+    // selectors guide: https://api.jquery.com/category/selectors/
+    // = is exactly equal
+    // != is not equal
+    // ^= is starts with
+    // $= is ends with
+    // *= is contains
+    // ~= is contains word
+    // |= is starts with prefix (i.e., |= "prefix" matches "prefix-...")
+    // ===
     await Promise.all([
       page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
       page.click(`a[href$="${eventId}"]`),
@@ -195,7 +186,7 @@ export const scrapeEventById = async (
     ]);
 
     const yachtTableRows = await page.$$eval(
-      'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table:nth-child(2) > tbody > tr',
+      YS_YACHT_TABLE_SELECTOR,
       (rows) => {
         return Array.from(rows, (row) => {
           const columns = row.querySelectorAll('td');
