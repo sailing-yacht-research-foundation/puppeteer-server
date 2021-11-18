@@ -1,4 +1,6 @@
 import puppeteer from 'puppeteer';
+import cheerio from 'cheerio';
+
 import logger from '../logger';
 
 const YS_LOGIN_PAGE = 'https://yachtscoring.com/admin_login.cfm';
@@ -64,4 +66,71 @@ export const testCredentials = async (user: string, password: string) => {
     }`,
   );
   return isSuccessful;
+};
+
+export const fetchEvents = async (user: string, password: string) => {
+  logger.info('YachtScoring.com fetch process started');
+  const browser = await puppeteer.launch({
+    headless: false, // open this for testing
+    ignoreHTTPSErrors: true,
+    args: [
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-setuid-sandbox',
+      '--disable-gpu',
+    ],
+  });
+  try {
+    const page = await browser.newPage();
+
+    await page.goto(YS_LOGIN_PAGE);
+    await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_USER}]`);
+    await page.type(`input[name=${YS_LOGIN_INPUT_USER}]`, user, { delay: 20 });
+    await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_PASS}]`);
+    await page.type(`input[name=${YS_LOGIN_INPUT_PASS}]`, password, {
+      delay: 20,
+    });
+    await Promise.all([
+      page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
+      page.click('input[type="submit"]'),
+    ]);
+
+    const mainTableRows = await page.$$eval(
+      'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr',
+      (rows) => {
+        return Array.from(rows, (row) => {
+          const columns = row.querySelectorAll('td');
+          // return columns;
+          return Array.from(columns, (column) => column.innerHTML);
+        });
+      },
+    );
+    if (mainTableRows.length === 0) {
+      throw new Error('Unable to get any events');
+    }
+
+    const events = mainTableRows
+      .filter((row) => {
+        return !(row.length < 4 || !row[0].includes('Event_ID='));
+      })
+      .map((row) => {
+        const $ = cheerio.load(row[0]);
+        return {
+          link: $('a').attr('href'),
+          eventId: $('a')
+            .attr('href')
+            ?.split('admin_main.cfm?')[1]
+            .split('=')[1],
+          eventName: $('a').text(),
+        };
+      });
+
+    console.table(events);
+  } catch (error) {
+    logger.error(`Failed to fetch events from YS (user: ${user}) - `, error);
+  } finally {
+    await browser.close();
+  }
 };

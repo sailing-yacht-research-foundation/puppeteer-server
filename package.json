@@ -16,6 +16,7 @@
   "dependencies": {
     "aws-sdk": "^2.1029.0",
     "bull": "^4.1.1",
+    "cheerio": "*",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "ioredis": "^4.28.0",
