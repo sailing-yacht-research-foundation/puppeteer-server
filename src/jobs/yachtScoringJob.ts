@@ -7,15 +7,12 @@ import {
   externalServiceSources,
 } from '../models/syrf-schema/enums';
 import { testCredentials } from '../services/yachtScoring';
+import { aes256GCM } from '../utils/aesCrypto';
 
-type YachtScoringTestCredentialsData = {
-  type: 'test-credentials';
-  userProfileId: string;
-  user: string;
-  password: string;
-};
-
-type YachtScoringJobData = YachtScoringTestCredentialsData;
+import {
+  YachtScoringJobData,
+  YachtScoringTestCredentialsData,
+} from '../types/YachtScoring-Type';
 
 var yachtScoringQueue: Bull.Queue<YachtScoringJobData>;
 
@@ -37,13 +34,17 @@ export const testCredentialsWorker = async (
   try {
     isSuccessful = await testCredentials(user, password);
     if (isSuccessful) {
+      const cryptoUtil = aes256GCM(
+        process.env.CRYPTO_INTERNAL_AES_GCM_KEY as string,
+      );
+      const encryptedPassword = await cryptoUtil.encrypt(password);
       await db.externalServiceCredential.bulkCreate(
         [
           {
             userProfileId,
             source: externalServiceSources.yachtscoring,
             userId: user,
-            password: '*****222', // TODO: Encrypt this
+            password: encryptedPassword,
           },
         ],
         {
