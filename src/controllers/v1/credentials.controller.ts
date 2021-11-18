@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 
-import { validYSJobType } from '../../constants/yachtscoring';
 import * as yachtScoringJob from '../../jobs/yachtScoringJob';
 import { externalServiceSources } from '../../models/syrf-schema/enums';
+import { ValidYachtScoringJobType } from '../../types/YachtScoring-Type';
 
 export async function addCredentials(
   req: Request<
@@ -17,7 +17,7 @@ export async function addCredentials(
   switch (source) {
     case externalServiceSources.yachtscoring:
       const theJob = await yachtScoringJob.addJob({
-        type: validYSJobType.testCredentials,
+        type: ValidYachtScoringJobType.testCredentials,
         userProfileId,
         user,
         password,

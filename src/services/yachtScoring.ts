@@ -31,7 +31,9 @@ export const testCredentials = async (user: string, password: string) => {
     await page.type(`input[name=${YS_LOGIN_INPUT_PASS}]`, password, {
       delay: 20,
     });
+    logger.info('YachtScoring.com credentials input');
     await page.click('input[type="submit"]');
+    logger.info('YachtScoring.com credentials submitted');
     const successPromise = new Promise<boolean>(async (resolve) => {
       try {
         await page.waitForFunction(

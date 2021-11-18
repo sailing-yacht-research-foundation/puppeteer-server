@@ -10,6 +10,7 @@ import { testCredentials } from '../services/yachtScoring';
 import { aes256GCM } from '../utils/aesCrypto';
 
 import {
+  ValidYachtScoringJobType,
   YachtScoringJobData,
   YachtScoringTestCredentialsData,
 } from '../types/YachtScoring-Type';
@@ -65,7 +66,7 @@ export const worker = async (
 ): Promise<boolean> => {
   let jobResult = false;
   switch (job.data.type) {
-    case 'test-credentials':
+    case ValidYachtScoringJobType.testCredentials:
       jobResult = await testCredentialsWorker(
         job as Bull.Job<YachtScoringTestCredentialsData>,
       );
@@ -83,6 +84,7 @@ export const setup = (opts: Bull.QueueOptions) => {
     );
   });
   yachtScoringQueue.on('completed', (job) => {
+    job.remove();
     logger.info(
       `Testing YachtScoring credentials Completed. JobID: [${job.id}]`,
     );
