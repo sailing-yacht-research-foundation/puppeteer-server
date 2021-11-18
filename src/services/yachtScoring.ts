@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import cheerio from 'cheerio';
 
 import logger from '../logger';
+import { closePageAndBrowser, launchBrowser } from '../utils/puppeteerLauncher';
 
 const YS_LOGIN_PAGE = 'https://yachtscoring.com/admin_login.cfm';
 const YS_LOGIN_INPUT_USER = 'loginuser';
@@ -10,21 +11,14 @@ const YS_LOGIN_TIMEOUT = 5000;
 
 export const testCredentials = async (user: string, password: string) => {
   logger.info('YachtScoring.com Login process started');
-  const browser = await puppeteer.launch({
-    // headless: false, // open this for testing
-    ignoreHTTPSErrors: true,
-    args: [
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-setuid-sandbox',
-      '--disable-gpu',
-    ],
-  });
+  const browser = await launchBrowser();
   let isSuccessful = false;
+  let page: puppeteer.Page | undefined;
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
+    if (!page) {
+      throw new Error('Page failed to initialize');
+    }
 
     await page.goto(YS_LOGIN_PAGE);
     await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_USER}]`);
@@ -33,32 +27,24 @@ export const testCredentials = async (user: string, password: string) => {
     await page.type(`input[name=${YS_LOGIN_INPUT_PASS}]`, password, {
       delay: 20,
     });
-    logger.info('YachtScoring.com credentials input');
-    await page.click('input[type="submit"]');
-    logger.info('YachtScoring.com credentials submitted');
-    const successPromise = new Promise<boolean>(async (resolve) => {
-      try {
-        await page.waitForFunction(
-          'document.querySelector("body").innerText.includes("Select the event you would like to work with")',
-          { timeout: YS_LOGIN_TIMEOUT },
-        );
-        resolve(true);
-      } catch (error) {}
-    });
-    const failedPromise = new Promise<boolean>(async (resolve) => {
-      try {
-        await page.waitForFunction(
-          'document.querySelector("body").innerText.includes("We were unable to verify your login")',
-          { timeout: YS_LOGIN_TIMEOUT },
-        );
-        resolve(false);
-      } catch (error) {}
-    });
-    isSuccessful = await Promise.race([successPromise, failedPromise]);
+    await Promise.all([
+      page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
+      page.click('input[type="submit"]'),
+    ]);
+    const loginResultHtml = await page.$eval(
+      'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr',
+      (element) => {
+        return element.innerHTML;
+      },
+    );
+
+    isSuccessful = loginResultHtml.includes(
+      'Select the event you would like to work with',
+    );
   } catch (error) {
     logger.error(`Failed to login to YS (user: ${user}) - `, error);
   } finally {
-    await browser.close();
+    closePageAndBrowser({ page, browser });
   }
   logger.info(
     `YachtScoring.com Login process finished. Result: ${
