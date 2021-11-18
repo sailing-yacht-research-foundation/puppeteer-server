@@ -7,12 +7,15 @@ import { closePageAndBrowser, launchBrowser } from '../utils/puppeteerLauncher';
 const YS_LOGIN_PAGE = 'https://yachtscoring.com/admin_login.cfm';
 const YS_LOGIN_INPUT_USER = 'loginuser';
 const YS_LOGIN_INPUT_PASS = 'loginpass';
-const YS_LOGIN_TIMEOUT = 5000;
+const YS_LOGIN_TIMEOUT = 10000;
+const YS_REDIRECT_TIMEOUT = 5000;
 const YS_MAIN_TABLE_LOGGED_IN_SELECTOR =
   'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr';
 const YS_YACHT_TABLE_SELECTOR =
   'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table:nth-child(2) > tbody > tr';
 
+// All of the scrape process will require login first and it's a repetitive task
+// This function should serve as the initial process for all f(x)
 export const loginProcess = async (
   page: puppeteer.Page,
   credentials: { user: string; password: string },
@@ -125,44 +128,28 @@ export const scrapeEventById = async (
   eventId: string,
 ) => {
   logger.info('YachtScoring.com scrape event started');
-  const browser = await puppeteer.launch({
-    headless: false, // open this for testing
-    ignoreHTTPSErrors: true,
-    args: [
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-setuid-sandbox',
-      '--disable-gpu',
-    ],
-  });
+  const browser = await launchBrowser();
+  let page: puppeteer.Page | undefined;
+  let yachts: {
+    id: string;
+    circle: string;
+    division: string;
+    class: string;
+    altClass: string;
+    sailNumber: string;
+    yachtName: string;
+    ownerName: string;
+    yachtType: string;
+    length: number;
+    origin: string;
+    paid: boolean;
+  }[] = [];
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
+    const isLoggedIn = await loginProcess(page, { user, password });
 
-    await page.goto(YS_LOGIN_PAGE);
-    await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_USER}]`);
-    await page.type(`input[name=${YS_LOGIN_INPUT_USER}]`, user, { delay: 20 });
-    await page.waitForSelector(`input[name=${YS_LOGIN_INPUT_PASS}]`);
-    await page.type(`input[name=${YS_LOGIN_INPUT_PASS}]`, password, {
-      delay: 20,
-    });
-    await Promise.all([
-      page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
-      page.click('input[type="submit"]'),
-    ]);
-
-    const mainTableRows = await page.$$eval(
-      'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr',
-      (rows) => {
-        return Array.from(rows, (row) => {
-          const columns = row.querySelectorAll('td');
-          return Array.from(columns, (column) => column.innerHTML);
-        });
-      },
-    );
-    if (mainTableRows.length === 0) {
-      throw new Error('Unable to get any events');
+    if (!isLoggedIn) {
+      throw new Error('Failed to fetch events - Login Failed');
     }
 
     // === Quick Note selectors | Remove after dev
@@ -175,16 +162,20 @@ export const scrapeEventById = async (
     // ~= is contains word
     // |= is starts with prefix (i.e., |= "prefix" matches "prefix-...")
     // ===
+
+    // Click the link with selected event, wait for navigation
     await Promise.all([
-      page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
+      page.waitForNavigation({ timeout: YS_REDIRECT_TIMEOUT }),
       page.click(`a[href$="${eventId}"]`),
     ]);
 
+    // Click the link of yacht list, wait for navigation
     await Promise.all([
-      page.waitForNavigation({ timeout: YS_LOGIN_TIMEOUT }),
+      page.waitForNavigation({ timeout: YS_REDIRECT_TIMEOUT }),
       page.click(`a[href="./edit_yacht_list.cfm"]`),
     ]);
 
+    // Parse the table containing available yachts, filter useless rows, map into object
     const yachtTableRows = await page.$$eval(
       YS_YACHT_TABLE_SELECTOR,
       (rows) => {
@@ -194,7 +185,7 @@ export const scrapeEventById = async (
         });
       },
     );
-    const yachts = yachtTableRows
+    yachts = yachtTableRows
       .filter((row) => {
         return !(row.length < 15 || row[0] === '');
       })
@@ -214,12 +205,29 @@ export const scrapeEventById = async (
           paid: row[13].includes('Yes'),
         };
       });
-    logger.info(yachts);
 
-    await page.waitForNetworkIdle({ idleTime: 5000 });
+    // Click the link to main menu, wait for navigation
+    await Promise.all([
+      page.waitForNavigation({ timeout: YS_REDIRECT_TIMEOUT }),
+      page.click(`a[href="./admin_main.cfm"]`),
+    ]);
+    // Click the link of crew list, wait for navigation
+    await Promise.all([
+      page.waitForNavigation({ timeout: YS_REDIRECT_TIMEOUT }),
+      page.click(`a[href="./crew_list_report.cfm"]`),
+    ]);
+
+    // TODO: Enable chrome visual, Fetch the crews for each yacht
   } catch (error) {
-    logger.error(`Failed to fetch events from YS (user: ${user}) - `, error);
+    logger.error(
+      `Failed to fetch event data from YS (user: ${user}) - `,
+      error,
+    );
   } finally {
-    await browser.close();
+    closePageAndBrowser({ page, browser });
   }
+
+  return {
+    yachts,
+  };
 };
