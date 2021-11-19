@@ -71,7 +71,7 @@ export const createMapScreenshot = async (centerPosition: [number, number]) => {
       opacitySource: 0.1,
       opacityDest: 1,
     });
-    finalImageBuffer = await image.getBufferAsync(Jimp.MIME_PNG);
+    finalImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
     try {
       const compressedBuffer = await sharp(finalImageBuffer)
         .jpeg({ quality: 80 })

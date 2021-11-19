@@ -63,7 +63,8 @@ describe('createMapScreenshot - function to generate an open graph image of a co
 
     const image = await Jimp.read(result);
     expect(image.getMIME()).toEqual(Jimp.MIME_JPEG);
-  }, 10000);
+  });
+
   it('should throw error when no required environment is setup', async () => {
     delete process.env.MAPBOX_ID;
     delete process.env.MAPBOX_API_KEY;

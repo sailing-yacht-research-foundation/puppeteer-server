@@ -49,6 +49,11 @@ describe('puppeteer launcher - functions to create/close a browser instance with
   it('closePageAndBrowser - should fire up puppeteer and return browser instance', async () => {
     const browser = await launchBrowser();
     const page = await browser.newPage();
+
+    await closePageAndBrowser({});
+    expect(page.close).toHaveBeenCalledTimes(0);
+    expect(browser.close).toHaveBeenCalledTimes(0);
+
     await closePageAndBrowser({ page, browser });
 
     expect(page.close).toHaveBeenCalledTimes(1);
