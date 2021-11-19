@@ -1,8 +1,12 @@
 import puppeteer from 'puppeteer';
 import cheerio from 'cheerio';
-
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import striptags from 'striptags';
 import logger from '../logger';
 import { closePageAndBrowser, launchBrowser } from '../utils/puppeteerLauncher';
+
+dayjs.extend(customParseFormat);
 
 const YS_LOGIN_PAGE = 'https://yachtscoring.com/admin_login.cfm';
 const YS_LOGIN_INPUT_USER = 'loginuser';
@@ -13,6 +17,8 @@ const YS_MAIN_TABLE_LOGGED_IN_SELECTOR =
   'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr';
 const YS_YACHT_TABLE_SELECTOR =
   'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table:nth-child(2) > tbody > tr';
+const YS_CREW_TABLE_SELECTOR =
+  'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td > table:nth-child(3) > tbody > tr';
 
 // All of the scrape process will require login first and it's a repetitive task
 // This function should serve as the initial process for all f(x)
@@ -122,6 +128,38 @@ export const fetchEvents = async (user: string, password: string) => {
   return events;
 };
 
+type YSYacht = {
+  id: string;
+  circle: string;
+  division: string;
+  class: string;
+  altClass: string;
+  sailNumber: string;
+  yachtName: string;
+  ownerName: string;
+  yachtType: string;
+  length: number;
+  origin: string;
+  paid: boolean;
+  crews: YSVesselCrew[];
+};
+type YSVesselCrew = {
+  name: string;
+  address: string;
+  weight: string;
+  dob: string;
+  age: number;
+  role?: string;
+  wfIsafNo?: string;
+  sailorClass?: string;
+  usSailingNo?: string;
+  classMember: string;
+  phone?: string;
+  cell?: string;
+  email: string;
+  waiver: boolean;
+};
+
 export const scrapeEventById = async (
   user: string,
   password: string,
@@ -130,20 +168,7 @@ export const scrapeEventById = async (
   logger.info('YachtScoring.com scrape event started');
   const browser = await launchBrowser();
   let page: puppeteer.Page | undefined;
-  let yachts: {
-    id: string;
-    circle: string;
-    division: string;
-    class: string;
-    altClass: string;
-    sailNumber: string;
-    yachtName: string;
-    ownerName: string;
-    yachtType: string;
-    length: number;
-    origin: string;
-    paid: boolean;
-  }[] = [];
+  let yachts: YSYacht[] = [];
   try {
     page = await browser.newPage();
     const isLoggedIn = await loginProcess(page, { user, password });
@@ -203,6 +228,7 @@ export const scrapeEventById = async (
           length: parseFloat(row[11]),
           origin: row[12],
           paid: row[13].includes('Yes'),
+          crews: [],
         };
       });
 
@@ -217,7 +243,53 @@ export const scrapeEventById = async (
       page.click(`a[href="./crew_list_report.cfm"]`),
     ]);
 
-    // TODO: Enable chrome visual, Fetch the crews for each yacht
+    const crewTableRows = await page.$$eval(YS_CREW_TABLE_SELECTOR, (rows) => {
+      return Array.from(rows, (row) => {
+        const columns = row.querySelectorAll('td');
+        return Array.from(columns, (column) => column.innerHTML);
+      });
+    });
+    let activeYachtIndex: number = -1;
+    for (let i = 0; i < crewTableRows.length; i++) {
+      switch (crewTableRows[i].length) {
+        case 1:
+          if (
+            crewTableRows[i][0].includes('Crew: </b><b style="color: red">')
+          ) {
+            const $ = cheerio.load(crewTableRows[i][0]);
+            const [yachtName, sailNumber] = $('b').text().split('-');
+            activeYachtIndex = yachts.findIndex(
+              (row) =>
+                row.sailNumber === sailNumber.trim() &&
+                row.yachtName === yachtName.trim(),
+            );
+          }
+          break;
+        case 16:
+          if (activeYachtIndex !== -1) {
+            const record = crewTableRows[i];
+            yachts[activeYachtIndex].crews.push({
+              name: record[1],
+              address: record[2],
+              weight: record[3],
+              dob: dayjs(record[4], 'DD/MMM/YYYY').format('YYYY-MM-DD'),
+              age: parseInt(record[5]),
+              role: record[6] || undefined,
+              wfIsafNo: record[7] || undefined,
+              sailorClass: record[8] || undefined,
+              usSailingNo: record[9] || undefined,
+              classMember: record[10],
+              phone: record[11],
+              cell: record[12],
+              email: striptags(record[13]),
+              waiver: record[15].includes('check_blue'),
+            });
+          }
+          break;
+        default:
+          break;
+      }
+    }
   } catch (error) {
     logger.error(
       `Failed to fetch event data from YS (user: ${user}) - `,

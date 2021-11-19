@@ -17,6 +17,7 @@
     "aws-sdk": "^2.1029.0",
     "bull": "^4.1.1",
     "cheerio": "*",
+    "dayjs": "^1.10.7",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "ioredis": "^4.28.0",
@@ -26,6 +27,7 @@
     "puppeteer": "^11.0.0",
     "sequelize": "^6.9.0",
     "sharp": "^0.29.3",
+    "striptags": "^3.2.0",
     "winston": "^3.3.3"
   },
   "devDependencies": {
