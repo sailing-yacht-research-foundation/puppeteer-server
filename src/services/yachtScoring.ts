@@ -25,7 +25,7 @@ const YS_CREW_TABLE_SELECTOR =
 
 // All of the scrape process will require login first and it's a repetitive task
 // This function should serve as the initial process for all f(x)
-export const loginProcess = async (
+const loginProcess = async (
   page: puppeteer.Page,
   credentials: { user: string; password: string },
 ) => {
@@ -56,17 +56,22 @@ export const loginProcess = async (
     logger.error(`Failed to login to YS (user: ${user}) - `, error);
   }
 
+  logger.info(
+    `YachtScoring.com Login process finished. Result: ${
+      isSuccessful ? 'Success' : 'Fail'
+    }`,
+  );
   return isSuccessful;
 };
 
-export const testCredentials = async (user: string, password: string) => {
+const testCredentials = async (user: string, password: string) => {
   logger.info('YachtScoring.com Login process started');
   const browser = await launchBrowser();
   let isSuccessful = false;
   let page: puppeteer.Page | undefined;
   try {
     page = await browser.newPage();
-    isSuccessful = await loginProcess(page, { user, password });
+    isSuccessful = await exportFunctions.loginProcess(page, { user, password });
   } catch (error) {
     logger.error(`Unexpected error - yachtScoring.testCredentials - `, error);
   } finally {
@@ -82,7 +87,7 @@ export const testCredentials = async (user: string, password: string) => {
 
 // F(x) belows are WIP. Not clear how we will store the data, so this function works (scraping the data we want), but not connected to anything yet
 
-export const fetchEvents = async (user: string, password: string) => {
+const fetchEvents = async (user: string, password: string) => {
   logger.info('YachtScoring.com fetch event process started');
   const browser = await launchBrowser();
   let page: puppeteer.Page | undefined;
@@ -93,7 +98,10 @@ export const fetchEvents = async (user: string, password: string) => {
   }[] = [];
   try {
     page = await browser.newPage();
-    const isLoggedIn = await loginProcess(page, { user, password });
+    const isLoggedIn = await exportFunctions.loginProcess(page, {
+      user,
+      password,
+    });
 
     if (!isLoggedIn) {
       throw new Error('Failed to fetch events - Login Failed');
@@ -131,7 +139,7 @@ export const fetchEvents = async (user: string, password: string) => {
   return events;
 };
 
-export const scrapeEventById = async (
+const scrapeEventById = async (
   user: string,
   password: string,
   eventId: string,
@@ -142,7 +150,10 @@ export const scrapeEventById = async (
   let yachts: YachtScoringYacht[] = [];
   try {
     page = await browser.newPage();
-    const isLoggedIn = await loginProcess(page, { user, password });
+    const isLoggedIn = await exportFunctions.loginProcess(page, {
+      user,
+      password,
+    });
 
     if (!isLoggedIn) {
       throw new Error('Failed to fetch events - Login Failed');
@@ -274,3 +285,11 @@ export const scrapeEventById = async (
     yachts,
   };
 };
+
+const exportFunctions = {
+  loginProcess,
+  testCredentials,
+  fetchEvents,
+  scrapeEventById,
+};
+export default exportFunctions;

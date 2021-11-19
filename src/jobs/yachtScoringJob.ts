@@ -6,7 +6,7 @@ import {
   bullQueues,
   externalServiceSources,
 } from '../models/syrf-schema/enums';
-import { testCredentials } from '../services/yachtScoring';
+import yachtScoring from '../services/yachtScoring';
 import { aes256GCM } from '../utils/aesCrypto';
 
 import {
@@ -33,7 +33,7 @@ export const testCredentialsWorker = async (
 
   let isSuccessful = false;
   try {
-    isSuccessful = await testCredentials(user, password);
+    isSuccessful = await yachtScoring.testCredentials(user, password);
     if (isSuccessful) {
       const cryptoUtil = aes256GCM(
         process.env.CRYPTO_INTERNAL_AES_GCM_KEY as string,
