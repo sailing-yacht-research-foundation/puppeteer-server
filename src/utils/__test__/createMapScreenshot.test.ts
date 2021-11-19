@@ -1,9 +1,7 @@
-import path from 'path';
 import puppeteer from 'puppeteer';
 import Jimp from 'jimp';
-import sharp from 'sharp';
 
-const { createMapScreenshot } = require('../../utils/createMapScreenshot');
+import { createMapScreenshot } from '../createMapScreenshot';
 
 // ==== Puppeteer related mocks ====
 const mockPage = {

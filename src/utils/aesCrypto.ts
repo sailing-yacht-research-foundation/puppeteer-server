@@ -7,7 +7,7 @@ export const aes256GCM = (key: string) => {
   const ALGO = 'aes-256-gcm';
 
   const encrypt = async (str: string) => {
-    const iv = Buffer.from(await asyncRandomBytes(16));
+    const iv = Buffer.from(await asyncRandomBytes(12));
     const cipher = createCipheriv(ALGO, key, iv, {
       authTagLength: 16,
     });
@@ -25,14 +25,14 @@ export const aes256GCM = (key: string) => {
   const decrypt = (encryptedMsg: string) => {
     const encryptedBuffer = Buffer.from(encryptedMsg, 'base64');
     const iv = encryptedBuffer.slice(
-      encryptedBuffer.length - 16,
+      encryptedBuffer.length - 12,
       encryptedBuffer.length,
     );
     const authTag = encryptedBuffer.slice(
-      encryptedBuffer.length - 32,
-      encryptedBuffer.length - 16,
+      encryptedBuffer.length - 28,
+      encryptedBuffer.length - 12,
     );
-    const contentBuffer = encryptedBuffer.slice(0, encryptedBuffer.length - 32);
+    const contentBuffer = encryptedBuffer.slice(0, encryptedBuffer.length - 28);
     const decipher = createDecipheriv(ALGO, key, iv);
     decipher.setAuthTag(authTag);
     let str = decipher.update(contentBuffer, undefined, 'utf-8');
