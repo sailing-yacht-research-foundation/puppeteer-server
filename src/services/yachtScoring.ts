@@ -281,9 +281,7 @@ const scrapeEventById = async (
     closePageAndBrowser({ page, browser });
   }
 
-  return {
-    yachts,
-  };
+  return yachts;
 };
 
 const exportFunctions = {
