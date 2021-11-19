@@ -3,8 +3,11 @@ import cheerio from 'cheerio';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import striptags from 'striptags';
+
 import logger from '../logger';
 import { closePageAndBrowser, launchBrowser } from '../utils/puppeteerLauncher';
+
+import { YachtScoringYacht } from '../types/YachtScoring-Type';
 
 dayjs.extend(customParseFormat);
 
@@ -77,7 +80,7 @@ export const testCredentials = async (user: string, password: string) => {
   return isSuccessful;
 };
 
-// F(x) belows are WIP. Not clear how we will store the data, so this function works, but still rough draft
+// F(x) belows are WIP. Not clear how we will store the data, so this function works (scraping the data we want), but not connected to anything yet
 
 export const fetchEvents = async (user: string, password: string) => {
   logger.info('YachtScoring.com fetch event process started');
@@ -128,38 +131,6 @@ export const fetchEvents = async (user: string, password: string) => {
   return events;
 };
 
-type YSYacht = {
-  id: string;
-  circle: string;
-  division: string;
-  class: string;
-  altClass: string;
-  sailNumber: string;
-  yachtName: string;
-  ownerName: string;
-  yachtType: string;
-  length: number;
-  origin: string;
-  paid: boolean;
-  crews: YSVesselCrew[];
-};
-type YSVesselCrew = {
-  name: string;
-  address: string;
-  weight: string;
-  dob: string;
-  age: number;
-  role?: string;
-  wfIsafNo?: string;
-  sailorClass?: string;
-  usSailingNo?: string;
-  classMember: string;
-  phone?: string;
-  cell?: string;
-  email: string;
-  waiver: boolean;
-};
-
 export const scrapeEventById = async (
   user: string,
   password: string,
@@ -168,7 +139,7 @@ export const scrapeEventById = async (
   logger.info('YachtScoring.com scrape event started');
   const browser = await launchBrowser();
   let page: puppeteer.Page | undefined;
-  let yachts: YSYacht[] = [];
+  let yachts: YachtScoringYacht[] = [];
   try {
     page = await browser.newPage();
     const isLoggedIn = await loginProcess(page, { user, password });
