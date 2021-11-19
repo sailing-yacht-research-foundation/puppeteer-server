@@ -25,5 +25,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
+      - name: Init submodule to repo
+        run: git submodule update --init
       - run: npm ci
       - run: npm test
