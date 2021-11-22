@@ -2,7 +2,8 @@ import { aes256GCM } from '../aesCrypto';
 
 describe('aesCrypto - functions to generate encrypted message, or decrypt the cipher using AES', () => {
   it('aes256GCM - should return encryptor & decryptor with provided key using Galois/Counter Mode', async () => {
-    const key = 'DRYZVOUPkZXvZ2wQBt33tUmMEqYuyntE';
+    const key =
+      '1c2d78b421b5565982c9de306e3ccc996f84053d3f2e8009591ce273f44fe133';
     const { encrypt, decrypt } = aes256GCM(key);
     expect(typeof encrypt).toBe('function');
     expect(typeof decrypt).toBe('function');

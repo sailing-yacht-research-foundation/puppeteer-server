@@ -5,10 +5,11 @@ const asyncRandomBytes = promisify(randomBytes);
 
 export const aes256GCM = (key: string) => {
   const ALGO = 'aes-256-gcm';
+  const keyInBytes = Buffer.from(key, 'hex');
 
   const encrypt = async (str: string) => {
     const iv = Buffer.from(await asyncRandomBytes(12));
-    const cipher = createCipheriv(ALGO, key, iv, {
+    const cipher = createCipheriv(ALGO, keyInBytes, iv, {
       authTagLength: 16,
     });
     let encrypted = cipher.update(str, 'utf8', 'base64');
@@ -33,7 +34,7 @@ export const aes256GCM = (key: string) => {
       encryptedBuffer.length - 12,
     );
     const contentBuffer = encryptedBuffer.slice(0, encryptedBuffer.length - 28);
-    const decipher = createDecipheriv(ALGO, key, iv);
+    const decipher = createDecipheriv(ALGO, keyInBytes, iv);
     decipher.setAuthTag(authTag);
     let str = decipher.update(contentBuffer, undefined, 'utf-8');
     str += decipher.final('utf8');
