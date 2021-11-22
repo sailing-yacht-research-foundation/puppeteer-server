@@ -1,4 +1,5 @@
 import Bull from 'bull';
+import { v4 as uuidv4 } from 'uuid';
 
 import db from '../models';
 import logger from '../logger';
@@ -17,6 +18,12 @@ import {
   YachtScoringTestCredentialsData,
   YachtScoringYacht,
 } from '../types/YachtScoring-Type';
+import {
+  YachtScoringImportedCrewDataToSave,
+  YachtScoringImportedParticipantDataToSave,
+  YachtScoringImportedVesselDataToSave,
+} from '../types/General-Type';
+import { fetchEventData } from '../services/fetchDBData';
 
 var yachtScoringQueue: Bull.Queue<YachtScoringJobData>;
 
@@ -110,22 +117,20 @@ export const getEventsWorker = async (
 export const importEventDataWorker = async (
   job: Bull.Job<YachtScoringImportEventData>,
 ) => {
-  const { credentialId, ysEventId } = job.data;
+  const { credentialId, ysEventId, calendarEventId } = job.data;
 
-  let isSuccessful = false;
-  let message = '';
+  let isSuccessfulScrape = false;
+  let isSuccessfulSaving = false;
   let yachts: YachtScoringYacht[] = [];
   if (!credentialId || !ysEventId) {
     logger.error(
       `YS Import Event Job Skipped, data incomplete. credentialId: ${credentialId} | ysEventId: ${ysEventId}`,
     );
-    message = 'Incomplete Data';
   }
 
   const credential = await db.externalServiceCredential.findByPk(credentialId);
   if (!credential) {
     logger.error(`YS Get Events Skipped, Credentials not found`);
-    message = 'No credentials found';
   }
 
   if (credential) {
@@ -140,13 +145,140 @@ export const importEventDataWorker = async (
         decryptedPassword,
         ysEventId,
       );
-      isSuccessful = true;
+      isSuccessfulScrape = true;
     } catch (error) {
       logger.error('Failed to import event For YachtScoring:', error);
     }
   }
 
-  return { isSuccessful, message, yachts };
+  if (isSuccessfulScrape) {
+    const vesselToSave: YachtScoringImportedVesselDataToSave[] = [];
+    const participantToSave: YachtScoringImportedParticipantDataToSave[] = [];
+    const crewToSave: YachtScoringImportedCrewDataToSave[] = [];
+    let vesselParticipantGroupId: string;
+    try {
+      const {
+        vesselParticipantGroupId: vpgId,
+        existingVesselParticipants,
+        existingVessels,
+        existingCrews,
+        existingParticipants,
+      } = await fetchEventData(calendarEventId);
+
+      vesselParticipantGroupId = vpgId;
+      for (let i = 0; i < yachts.length; i++) {
+        const { id, yachtName, yachtType, length, crews } = yachts[i];
+
+        let vesselData: YachtScoringImportedVesselDataToSave = {
+          id: uuidv4(),
+          vesselId: id,
+          globalId: id,
+          lengthInMeters: length,
+          publicName: yachtName,
+          model: yachtType,
+          source: externalServiceSources.yachtscoring,
+          vesselParticipantId: uuidv4(),
+        };
+        const existVessel = existingVessels.find((row) => {
+          return (
+            row.vesselId === id &&
+            row.source === externalServiceSources.yachtscoring
+          );
+        });
+        if (existVessel) {
+          vesselData.id = existVessel.id;
+          const vp = existingVesselParticipants.find(
+            (row) => row.vesselId === existVessel.id,
+          );
+          if (vp) {
+            vesselData.vesselParticipantId = vp.id;
+          }
+        }
+
+        crews.forEach((row) => {
+          const existParticipant = existingParticipants.find((existRow) => {
+            return existRow.participantId === row.name;
+          });
+          const existCrew = existingCrews.find((existRow) => {
+            return (
+              existParticipant !== undefined &&
+              existRow.participantId === existParticipant.id
+            );
+          });
+          const participantId = existParticipant?.id || uuidv4();
+          participantToSave.push({
+            id: participantId,
+            participantId: row.name,
+            publicName: row.name,
+            calendarEventId,
+          });
+          crewToSave.push({
+            id: existCrew?.id,
+            participantId,
+            vesselParticipantId: vesselData.vesselParticipantId,
+          });
+        });
+
+        vesselToSave.push(vesselData);
+      }
+    } catch (error) {
+      logger.error('Failed to fetch event data: ', error);
+    }
+
+    const transaction = await db.sequelize.transaction();
+    try {
+      await db.vessel.bulkCreate(
+        vesselToSave.map((row) => {
+          const { vesselParticipantId, ...vesselData } = row;
+          return vesselData;
+        }),
+        {
+          updateOnDuplicate: [
+            'vesselId',
+            'globalId',
+            'lengthInMeters',
+            'publicName',
+            'model',
+          ],
+          transaction,
+        },
+      );
+      await db.vesselParticipant.bulkCreate(
+        vesselToSave.map((row) => {
+          const { vesselParticipantId, id: vesselId } = row;
+          return {
+            id: vesselParticipantId,
+            vesselId,
+            vesselParticipantGroupId,
+          };
+        }),
+        {
+          updateOnDuplicate: ['vesselId', 'vesselParticipantGroupId'],
+          transaction,
+        },
+      );
+      await db.participant.bulkCreate(participantToSave, {
+        updateOnDuplicate: ['participantId', 'publicName', 'calendarEventId'],
+        transaction,
+      });
+
+      await db.vesselParticipantCrew.bulkCreate(crewToSave, {
+        updateOnDuplicate: ['participantId', 'vesselParticipantId'],
+        transaction,
+      });
+      await transaction.commit();
+      isSuccessfulSaving = true;
+    } catch (error) {
+      await transaction.rollback();
+      logger.error('Failed to save YacthScoring scraped data: ', error);
+    }
+  }
+  logger.info(
+    `YS Import Event Done, Scrape status: ${
+      isSuccessfulScrape ? 'Success' : 'Failed'
+    } - Saving: ${isSuccessfulSaving ? 'Success' : 'Failed'}`,
+  );
+  return { isSuccessfulScrape, isSuccessfulSaving };
 };
 
 export const worker = async (

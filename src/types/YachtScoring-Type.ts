@@ -20,6 +20,7 @@ export type YachtScoringImportEventData = {
   type: ValidYachtScoringJobType.importEventData;
   credentialId: string;
   ysEventId: string;
+  calendarEventId: string;
 };
 
 export type YachtScoringJobData =

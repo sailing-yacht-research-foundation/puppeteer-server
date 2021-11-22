@@ -23,8 +23,6 @@ const YS_YACHT_TABLE_SELECTOR =
 const YS_CREW_TABLE_SELECTOR =
   'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td > table:nth-child(3) > tbody > tr';
 
-// All of the scrape process will require login first and it's a repetitive task
-// This function should serve as the initial process for all f(x)
 const loginProcess = async (
   page: puppeteer.Page,
   credentials: { user: string; password: string },
@@ -84,8 +82,6 @@ const testCredentials = async (user: string, password: string) => {
   );
   return isSuccessful;
 };
-
-// F(x) belows are WIP. Not clear how we will store the data, so this function works (scraping the data we want), but not connected to anything yet
 
 const fetchEvents = async (user: string, password: string) => {
   logger.info('YachtScoring.com fetch event process started');

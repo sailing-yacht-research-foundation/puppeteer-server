@@ -7,6 +7,8 @@ module.exports = {
     '<rootDir>/src/models',
     '<rootDir>/src/redis',
     '<rootDir>/src/logger',
+    '<rootDir>/src/externalServices',
+    '<rootDir>/src/types',
   ],
   modulePathIgnorePatterns: ['<rootDir>/build/'],
   setupFiles: ['dotenv/config'],

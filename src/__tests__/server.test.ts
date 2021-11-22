@@ -103,4 +103,46 @@ describe('HTTP Server for Puppeteer Server', () => {
         done();
       });
   });
+
+  test('POST /v1/external-platform/get-events - Success', (done) => {
+    const spy = jest.spyOn(yachtScoringJob, 'addJob');
+    // @ts-ignore
+    spy.mockImplementationOnce(() => {
+      return {
+        finished: () => {
+          return {
+            isSuccessful: true,
+            message: '',
+            events: [
+              {
+                eventId: 'id-event-here',
+                eventName: 'name here',
+              },
+            ],
+          };
+        },
+      };
+    });
+
+    supertest(app)
+      .post('/v1/external-platform/get-events')
+      .send({
+        id: 'some-saved-id',
+        source: externalServiceSources.yachtscoring,
+      })
+      .expect(200)
+      .then((response) => {
+        const data = JSON.parse(response.text);
+        expect(data).toMatchObject({
+          isSuccessful: true,
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              eventId: 'id-event-here',
+              eventName: 'name here',
+            }),
+          ]),
+        });
+        done();
+      });
+  });
 });
