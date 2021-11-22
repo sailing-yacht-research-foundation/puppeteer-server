@@ -1,5 +1,6 @@
-import IORedis from 'ioredis';
 import Redis from 'ioredis';
+
+import logger from './logger';
 
 let bullClient: Redis.Redis;
 let bullSubscriber: Redis.Redis;
@@ -17,22 +18,20 @@ export const connect = (): Promise<void> => {
     bullSubscriber = new Redis(process.env.REDIS_HOST, opt);
 
     const timeout = setTimeout(() => {
-      console.log(
-        'redis create connection is taking too long, skip waiting for redis connection',
+      logger.info(
+        'Redis connection is taking too long, skip waiting for redis connection',
       );
       resolve();
     }, 5000);
 
     bullClient.ping((err) => {
       if (err) {
-        console.log('redis connection failed', err);
+        logger.error('Redis connection failed: ', err);
         reject(err);
       }
 
-      console.log(
-        'redis connection created to ',
-        process.env.REDIS_HOST,
-        opt.port,
+      logger.info(
+        `Redis connection established: ${process.env.REDIS_HOST}:${opt.port}`,
       );
       clearTimeout(timeout);
       resolve();
@@ -48,7 +47,7 @@ export const getBullSubscriber = () => bullSubscriber;
 
 export function createClient(
   type: 'client' | 'subscriber' | 'bclient',
-  redisOpts: IORedis.RedisOptions,
+  redisOpts: Redis.RedisOptions,
 ) {
   switch (type) {
     case 'subscriber':

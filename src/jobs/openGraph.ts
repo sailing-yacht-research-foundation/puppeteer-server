@@ -18,7 +18,7 @@ type EventOGJobData = {
 };
 type OGJobData = EventOGJobData | CompetitionOGJobData;
 
-var openGraphQueue: Bull.Queue<any>;
+var openGraphQueue: Bull.Queue<OGJobData>;
 
 export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
   const { id, position } = job.data || {};

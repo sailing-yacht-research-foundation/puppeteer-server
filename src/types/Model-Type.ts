@@ -56,3 +56,63 @@ export interface CompetitionUnitInterface extends Model {
   city?: string;
   status?: string;
 }
+
+export enum ExternalServicesSourceEnum {
+  yachtscoring = 'YACHTSCORING',
+}
+
+export interface ExternalServiceCredentialInterface extends Model {
+  id: string;
+  userProfileId: string;
+  source: ExternalServicesSourceEnum;
+  userId: string;
+  password: string;
+}
+
+export interface VesselInterface extends Model {
+  id: string;
+  vesselId?: string;
+  globalId?: string;
+  lengthInMeters?: number;
+  publicName?: string;
+  source: string;
+}
+
+export interface ParticipantInterface extends Model {
+  id: string;
+  participantId?: string;
+  publicName?: string;
+  trackerUrl?: string;
+  calendarEventId: string;
+}
+
+export interface VesselParticipantInterface extends Model {
+  id: string;
+  vesselId: string;
+  vesselParticipantId?: string;
+  vesselParticipantGroupId: string;
+}
+
+export interface VesselParticipantCrewInterface extends Model {
+  id: string;
+  participantId: string;
+  vesselParticipantId: string;
+}
+
+export interface VesselParticipantGroupInterface extends Model {
+  id: string;
+  vesselParticipantGroupId: string;
+  calendarEventId: string;
+}
+
+export interface UserProfileInterface extends Model {
+  id: string;
+  sub: string;
+  birthdate?: string;
+  email?: string;
+  email_verified: boolean;
+  name?: string;
+  phone_number_verified: boolean;
+  phone_number?: string;
+  avatar?: string;
+}

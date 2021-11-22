@@ -3,9 +3,11 @@ import logger from '../logger';
 
 import { createClient } from '../redis';
 import * as ogJob from './openGraph';
+import * as yachtScoringJob from './yachtScoringJob';
 
 export const registerWorkers = (opts: Bull.QueueOptions) => {
   ogJob.setup(opts);
+  yachtScoringJob.setup(opts);
 };
 
 export const registerBGWorkers = async () => {

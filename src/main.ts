@@ -11,6 +11,11 @@ const port = process.env.PORT || 3000;
 
 (async () => {
   try {
+    if (!process.env.CRYPTO_INTERNAL_AES_GCM_KEY) {
+      throw new Error(
+        'Unable to start service, need CRYPTO_INTERNAL_AES_GCM_KEY setup',
+      );
+    }
     const app = createServer();
     await Promise.all([db.startDB(), redisConnect()]);
 
