@@ -3,11 +3,21 @@ import { ModelCtor, Sequelize } from 'sequelize';
 import calendarEventModel from './syrf-schema/entities/CalendarEvent';
 import competitionUnitModel from './syrf-schema/entities/CompetitionUnit';
 import externalServiceCredentialModel from './syrf-schema/entities/ExternalServiceCredential';
+import participantModel from './syrf-schema/entities/Participant';
+import vesselModel from './syrf-schema/entities/Vessel';
+import vesselParticipantModel from './syrf-schema/entities/VesselParticipant';
+import vesselParticipantCrewModel from './syrf-schema/entities/VesselParticipantCrew';
+import vesselParticipantGroupModel from './syrf-schema/entities/VesselParticipantGroup';
 
 import {
   CalendarEventInterface,
   CompetitionUnitInterface,
   ExternalServiceCredentialInterface,
+  ParticipantInterface,
+  VesselInterface,
+  VesselParticipantInterface,
+  VesselParticipantCrewInterface,
+  VesselParticipantGroupInterface,
 } from '../types/Model-Type';
 import logger from '../logger';
 
@@ -38,6 +48,11 @@ const db: {
   calendarEvent: ModelCtor<CalendarEventInterface>;
   competitionUnit: ModelCtor<CompetitionUnitInterface>;
   externalServiceCredential: ModelCtor<ExternalServiceCredentialInterface>;
+  participant: ModelCtor<ParticipantInterface>;
+  vessel: ModelCtor<VesselInterface>;
+  vesselParticipant: ModelCtor<VesselParticipantInterface>;
+  vesselParticipantCrew: ModelCtor<VesselParticipantCrewInterface>;
+  vesselParticipantGroup: ModelCtor<VesselParticipantGroupInterface>;
 } = {
   sequelize,
   calendarEvent: calendarEventModel(
@@ -49,6 +64,19 @@ const db: {
   externalServiceCredential: externalServiceCredentialModel(
     sequelize,
   ) as unknown as ModelCtor<ExternalServiceCredentialInterface>,
+  participant: participantModel(
+    sequelize,
+  ) as unknown as ModelCtor<ParticipantInterface>,
+  vessel: vesselModel(sequelize) as unknown as ModelCtor<VesselInterface>,
+  vesselParticipant: vesselParticipantModel(
+    sequelize,
+  ) as unknown as ModelCtor<VesselParticipantInterface>,
+  vesselParticipantCrew: vesselParticipantCrewModel(
+    sequelize,
+  ) as unknown as ModelCtor<VesselParticipantCrewInterface>,
+  vesselParticipantGroup: vesselParticipantGroupModel(
+    sequelize,
+  ) as unknown as ModelCtor<VesselParticipantGroupInterface>,
   startDB: async () => {
     await sequelize.authenticate();
     logger.info(`Main DB Connected!`);

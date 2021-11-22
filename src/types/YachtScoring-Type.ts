@@ -1,5 +1,7 @@
 export enum ValidYachtScoringJobType {
   testCredentials = 'test-credentials',
+  getEvents = 'get-events',
+  importEventData = 'import-event-data',
 }
 
 export type YachtScoringTestCredentialsData = {
@@ -9,7 +11,21 @@ export type YachtScoringTestCredentialsData = {
   password: string;
 };
 
-export type YachtScoringJobData = YachtScoringTestCredentialsData;
+export type YachtScoringGetEventData = {
+  type: ValidYachtScoringJobType.getEvents;
+  id: string;
+};
+
+export type YachtScoringImportEventData = {
+  type: ValidYachtScoringJobType.importEventData;
+  credentialId: string;
+  ysEventId: string;
+};
+
+export type YachtScoringJobData =
+  | YachtScoringTestCredentialsData
+  | YachtScoringGetEventData
+  | YachtScoringImportEventData;
 
 export type YachtScoringYachtCrew = {
   name: string;

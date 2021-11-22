@@ -11,14 +11,17 @@ import { aes256GCM } from '../utils/aesCrypto';
 
 import {
   ValidYachtScoringJobType,
+  YachtScoringGetEventData,
+  YachtScoringImportEventData,
   YachtScoringJobData,
   YachtScoringTestCredentialsData,
+  YachtScoringYacht,
 } from '../types/YachtScoring-Type';
 
 var yachtScoringQueue: Bull.Queue<YachtScoringJobData>;
 
 export const testCredentialsWorker = async (
-  job: Bull.Job<YachtScoringJobData>,
+  job: Bull.Job<YachtScoringTestCredentialsData>,
 ) => {
   const { userProfileId, user, password } = job.data;
 
@@ -61,33 +64,124 @@ export const testCredentialsWorker = async (
   return isSuccessful;
 };
 
+export const getEventsWorker = async (
+  job: Bull.Job<YachtScoringGetEventData>,
+) => {
+  const { id } = job.data;
+
+  let isSuccessful = false;
+  let message = '';
+  let events: { eventId: string; eventName: string }[] = [];
+  if (!id) {
+    logger.error(`YS Get Events Skipped, data incomplete. id: ${id}`);
+    message = 'No ID Provided';
+  }
+
+  const credential = await db.externalServiceCredential.findByPk(id);
+  if (!credential) {
+    logger.error(`YS Get Events Skipped, Credentials not found`);
+    message = 'No credentials found';
+  }
+
+  if (credential) {
+    const cryptoUtil = aes256GCM(
+      process.env.CRYPTO_INTERNAL_AES_GCM_KEY as string,
+    );
+    const decryptedPassword = cryptoUtil.decrypt(credential.password);
+    try {
+      const ysEvents = await yachtScoring.fetchEvents(
+        credential.userId,
+        decryptedPassword,
+      );
+      events = ysEvents
+        .filter((row) => row.eventId !== undefined)
+        .map((row) => {
+          return { eventId: row.eventId as string, eventName: row.eventName };
+        });
+      isSuccessful = true;
+    } catch (error) {
+      logger.error('Failed to get events For YachtScoring:', error);
+    }
+  }
+
+  return { isSuccessful, message, events };
+};
+
+export const importEventDataWorker = async (
+  job: Bull.Job<YachtScoringImportEventData>,
+) => {
+  const { credentialId, ysEventId } = job.data;
+
+  let isSuccessful = false;
+  let message = '';
+  let yachts: YachtScoringYacht[] = [];
+  if (!credentialId || !ysEventId) {
+    logger.error(
+      `YS Import Event Job Skipped, data incomplete. credentialId: ${credentialId} | ysEventId: ${ysEventId}`,
+    );
+    message = 'Incomplete Data';
+  }
+
+  const credential = await db.externalServiceCredential.findByPk(credentialId);
+  if (!credential) {
+    logger.error(`YS Get Events Skipped, Credentials not found`);
+    message = 'No credentials found';
+  }
+
+  if (credential) {
+    const cryptoUtil = aes256GCM(
+      process.env.CRYPTO_INTERNAL_AES_GCM_KEY as string,
+    );
+    const decryptedPassword = cryptoUtil.decrypt(credential.password);
+
+    try {
+      yachts = await yachtScoring.scrapeEventById(
+        credential.userId,
+        decryptedPassword,
+        ysEventId,
+      );
+      isSuccessful = true;
+    } catch (error) {
+      logger.error('Failed to import event For YachtScoring:', error);
+    }
+  }
+
+  return { isSuccessful, message, yachts };
+};
+
 export const worker = async (
   job: Bull.Job<YachtScoringJobData>,
-): Promise<boolean> => {
-  let jobResult = false;
+): Promise<any> => {
   switch (job.data.type) {
     case ValidYachtScoringJobType.testCredentials:
-      jobResult = await testCredentialsWorker(
+      const credentialsValid = await testCredentialsWorker(
         job as Bull.Job<YachtScoringTestCredentialsData>,
       );
-      break;
+      return credentialsValid;
+    case ValidYachtScoringJobType.getEvents:
+      const events = await getEventsWorker(
+        job as Bull.Job<YachtScoringGetEventData>,
+      );
+      return events;
+    case ValidYachtScoringJobType.importEventData:
+      const yachts = await importEventDataWorker(
+        job as Bull.Job<YachtScoringImportEventData>,
+      );
+      return yachts;
+    default:
+      return null;
   }
-  return jobResult;
 };
 export const setup = (opts: Bull.QueueOptions) => {
   yachtScoringQueue = new Bull(bullQueues.yachtScoringTestCredentials, opts);
   yachtScoringQueue.process(1, worker);
 
   yachtScoringQueue.on('failed', (job, err) => {
-    logger.error(
-      `Testing YachtScoring credentials Failed. JobID: [${job.id}], Error: ${err}`,
-    );
+    logger.error(`YachtScoring job failed. JobID: [${job.id}], Error: ${err}`);
   });
   yachtScoringQueue.on('completed', (job) => {
     job.remove();
-    logger.info(
-      `Testing YachtScoring credentials Completed. JobID: [${job.id}]`,
-    );
+    logger.info(`Yachtscoring job completed. JobID: [${job.id}]`);
   });
 };
 
