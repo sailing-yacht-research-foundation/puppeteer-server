@@ -166,7 +166,6 @@ export const importEventDataWorker = async (
       } = await fetchEventData(calendarEventId);
 
       vesselParticipantGroupId = vpgId;
-      const emailList: string[] = [];
       for (let i = 0; i < yachts.length; i++) {
         const { id, yachtName, yachtType, length, crews } = yachts[i];
 
@@ -196,10 +195,13 @@ export const importEventDataWorker = async (
           }
         }
 
+        const mapUserProfile = await mapUserByEmail(
+          crews.map((row) => row.email),
+        );
         crews.forEach((row) => {
-          emailList.push(row.email);
+          const userProfile = mapUserProfile.get(row.email);
           const existParticipant = existingParticipants.find((existRow) => {
-            return existRow.participantId === row.name;
+            return existRow.participantId === row.email;
           });
           const existCrew = existingCrews.find((existRow) => {
             return (
@@ -210,10 +212,11 @@ export const importEventDataWorker = async (
           const participantId = existParticipant?.id || uuidv4();
           participantToSave.push({
             id: participantId,
-            participantId: row.name,
+            participantId: row.email,
             publicName: row.name,
             calendarEventId,
             email: row.email,
+            userProfileId: userProfile?.id,
           });
           crewToSave.push({
             id: existCrew?.id,
@@ -224,14 +227,6 @@ export const importEventDataWorker = async (
 
         vesselToSave.push(vesselData);
       }
-
-      const mapUserProfile = await mapUserByEmail(emailList);
-      participantToSave.forEach((row) => {
-        const userProfile = mapUserProfile.get(row.email);
-        if (userProfile) {
-          row.userProfileId = userProfile.id;
-        }
-      });
     } catch (error) {
       logger.error('Failed to fetch event data: ', error);
     }
