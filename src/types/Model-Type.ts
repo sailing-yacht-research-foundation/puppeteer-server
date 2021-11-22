@@ -104,3 +104,15 @@ export interface VesselParticipantGroupInterface extends Model {
   vesselParticipantGroupId: string;
   calendarEventId: string;
 }
+
+export interface UserProfileInterface extends Model {
+  id: string;
+  sub: string;
+  birthdate?: string;
+  email?: string;
+  email_verified: boolean;
+  name?: string;
+  phone_number_verified: boolean;
+  phone_number?: string;
+  avatar?: string;
+}

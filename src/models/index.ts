@@ -4,6 +4,7 @@ import calendarEventModel from './syrf-schema/entities/CalendarEvent';
 import competitionUnitModel from './syrf-schema/entities/CompetitionUnit';
 import externalServiceCredentialModel from './syrf-schema/entities/ExternalServiceCredential';
 import participantModel from './syrf-schema/entities/Participant';
+import userProfileModel from './syrf-schema/entities/UserProfile';
 import vesselModel from './syrf-schema/entities/Vessel';
 import vesselParticipantModel from './syrf-schema/entities/VesselParticipant';
 import vesselParticipantCrewModel from './syrf-schema/entities/VesselParticipantCrew';
@@ -14,6 +15,7 @@ import {
   CompetitionUnitInterface,
   ExternalServiceCredentialInterface,
   ParticipantInterface,
+  UserProfileInterface,
   VesselInterface,
   VesselParticipantInterface,
   VesselParticipantCrewInterface,
@@ -49,6 +51,7 @@ const db: {
   competitionUnit: ModelCtor<CompetitionUnitInterface>;
   externalServiceCredential: ModelCtor<ExternalServiceCredentialInterface>;
   participant: ModelCtor<ParticipantInterface>;
+  userProfile: ModelCtor<UserProfileInterface>;
   vessel: ModelCtor<VesselInterface>;
   vesselParticipant: ModelCtor<VesselParticipantInterface>;
   vesselParticipantCrew: ModelCtor<VesselParticipantCrewInterface>;
@@ -67,6 +70,9 @@ const db: {
   participant: participantModel(
     sequelize,
   ) as unknown as ModelCtor<ParticipantInterface>,
+  userProfile: userProfileModel(
+    sequelize,
+  ) as unknown as ModelCtor<UserProfileInterface>,
   vessel: vesselModel(sequelize) as unknown as ModelCtor<VesselInterface>,
   vesselParticipant: vesselParticipantModel(
     sequelize,

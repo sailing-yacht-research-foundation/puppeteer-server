@@ -1,6 +1,7 @@
 import { Op } from 'sequelize';
 
 import db from '../models';
+import { UserProfileInterface } from '../types/Model-Type';
 
 export async function fetchEventData(calendarEventId: string) {
   const eventData = await db.calendarEvent.findByPk(calendarEventId);
@@ -56,4 +57,23 @@ export async function fetchEventData(calendarEventId: string) {
     existingParticipants,
     existingCrews,
   };
+}
+
+export async function mapUserByEmail(emails: string[]) {
+  const userProfiles = await db.userProfile.findAll({
+    where: {
+      email: {
+        [Op.in]: emails,
+      },
+    },
+    raw: true,
+  });
+  const userProfileMap = new Map<string, UserProfileInterface>();
+  userProfiles.forEach((row) => {
+    if (row.email) {
+      userProfileMap.set(row.email, row);
+    }
+  });
+
+  return userProfileMap;
 }

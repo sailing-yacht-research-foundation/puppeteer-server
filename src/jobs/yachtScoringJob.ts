@@ -23,7 +23,7 @@ import {
   YachtScoringImportedParticipantDataToSave,
   YachtScoringImportedVesselDataToSave,
 } from '../types/General-Type';
-import { fetchEventData } from '../services/fetchDBData';
+import { fetchEventData, mapUserByEmail } from '../services/fetchDBData';
 
 var yachtScoringQueue: Bull.Queue<YachtScoringJobData>;
 
@@ -166,6 +166,7 @@ export const importEventDataWorker = async (
       } = await fetchEventData(calendarEventId);
 
       vesselParticipantGroupId = vpgId;
+      const emailList: string[] = [];
       for (let i = 0; i < yachts.length; i++) {
         const { id, yachtName, yachtType, length, crews } = yachts[i];
 
@@ -196,6 +197,7 @@ export const importEventDataWorker = async (
         }
 
         crews.forEach((row) => {
+          emailList.push(row.email);
           const existParticipant = existingParticipants.find((existRow) => {
             return existRow.participantId === row.name;
           });
@@ -211,6 +213,7 @@ export const importEventDataWorker = async (
             participantId: row.name,
             publicName: row.name,
             calendarEventId,
+            email: row.email,
           });
           crewToSave.push({
             id: existCrew?.id,
@@ -221,6 +224,14 @@ export const importEventDataWorker = async (
 
         vesselToSave.push(vesselData);
       }
+
+      const mapUserProfile = await mapUserByEmail(emailList);
+      participantToSave.forEach((row) => {
+        const userProfile = mapUserProfile.get(row.email);
+        if (userProfile) {
+          row.userProfileId = userProfile.id;
+        }
+      });
     } catch (error) {
       logger.error('Failed to fetch event data: ', error);
     }
@@ -258,7 +269,13 @@ export const importEventDataWorker = async (
         },
       );
       await db.participant.bulkCreate(participantToSave, {
-        updateOnDuplicate: ['participantId', 'publicName', 'calendarEventId'],
+        ignoreDuplicates: false,
+        updateOnDuplicate: [
+          'participantId',
+          'publicName',
+          'calendarEventId',
+          'userProfileId',
+        ],
         transaction,
       });
 

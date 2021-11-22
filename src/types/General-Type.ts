@@ -14,6 +14,8 @@ export type YachtScoringImportedParticipantDataToSave = {
   participantId: string;
   publicName: string;
   calendarEventId: string;
+  email: string;
+  userProfileId?: string;
 };
 
 export type YachtScoringImportedCrewDataToSave = {
