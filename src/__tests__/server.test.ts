@@ -11,6 +11,7 @@ jest.mock('../jobs/yachtScoringJob', () => {
     addJob: jest.fn(),
   };
 });
+jest.mock('../middleware/basicAuth');
 jest.mock('../models');
 jest.mock('../utils/createMapScreenshot');
 
@@ -61,6 +62,7 @@ describe('HTTP Server for Puppeteer Server', () => {
 
     supertest(app)
       .post('/v1/external-platform/add-credentials')
+      .set('Authorization', 'Basic sometoken')
       .send({
         userProfileId: uuidv4(),
         source: externalServiceSources.yachtscoring,
@@ -88,6 +90,7 @@ describe('HTTP Server for Puppeteer Server', () => {
 
     supertest(app)
       .post('/v1/external-platform/add-credentials')
+      .set('Authorization', 'Basic sometoken')
       .send({
         userProfileId: uuidv4(),
         source: externalServiceSources.yachtscoring,
@@ -126,6 +129,7 @@ describe('HTTP Server for Puppeteer Server', () => {
 
     supertest(app)
       .post('/v1/external-platform/get-events')
+      .set('Authorization', 'Basic sometoken')
       .send({
         id: 'some-saved-id',
         source: externalServiceSources.yachtscoring,
