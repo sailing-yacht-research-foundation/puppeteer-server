@@ -18,7 +18,7 @@ export default async function basicAuth(
   );
   const [username, password] = credentials.split(':');
   // Note: Hardcoded. Do we need to have DB tables for this, it's only for inter-service communication.
-  const validList = [{ username: 'LDS', password: 'LDS' }];
+  const validList = [{ username: 'LDS', password: 'LDSnotTheChurch' }];
   if (
     !validList.find((row) => {
       return row.username === username && row.password === password;
