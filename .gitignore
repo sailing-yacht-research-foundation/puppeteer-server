@@ -109,7 +109,8 @@ build/
 ignorelist
 src/testing.ts
 
-deployment/.terraform
-deployment/terraform.tfstate
-deployment/terraform.tfstate.backup
-deployment/.terraform.lock.hcl
+deployment/**/.terraform
+deployment/**/terraform.tfstate
+deployment/**/terraform.tfstate.backup
+deployment/**/.terraform.lock.hcl
+deployment/**/.terraform.tfstate.lock.info
