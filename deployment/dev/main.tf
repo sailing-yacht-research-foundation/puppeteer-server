@@ -8,11 +8,11 @@ terraform {
 
 
   # backend "s3" {
-  #   bucket = "syrf-analytics-engine-terraform-state"
+  #   bucket = "syrf-puppeteer-server-terraform-state"
   #   key    = "global/s3/terraform.tfstate"
   #   region = "us-east-1"
 
-  #   dynamodb_table = "analytics-engine-terraform-state-locking"
+  #   dynamodb_table = "puppeteer-server-terraform-state-locking"
   #   encrypt        = true
   # }
 

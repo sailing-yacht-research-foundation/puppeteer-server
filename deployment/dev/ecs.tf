@@ -68,9 +68,9 @@ resource "aws_ecs_task_definition" "puppeteer_server_task" {
   DEFINITION
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  memory                   = 2048
+  memory                   = 2048 # Need to be at least 2x the size of cpu, I encountered error when setting this to 1024
   cpu                      = 1024
-  execution_role_arn       = "arn:aws:iam::335855654610:role/ecsTaskExecutionRole"
+  execution_role_arn       = var.iam_ecsTaskExecution_role  #Here's the role arn specified
 }
 
 resource "aws_security_group" "service_security_group" {
@@ -105,6 +105,8 @@ resource "aws_security_group" "service_security_group" {
   }
 }
 
+# Note: Removing below codes because it keeps failing on my side because of access issue, can reopen this if necessary
+# Probably we can re-use ecsTaskExecutionRole so not too much role is created, since right now every terraform project has their own task roles
 # resource "aws_iam_role" "ecsTaskExecutionRole" {
 #   name               = "ecsTaskExecutionRole-PuppeteerServer"
 #   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
