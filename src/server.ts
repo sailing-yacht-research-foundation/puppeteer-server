@@ -1,5 +1,6 @@
 import express from 'express';
 import basicAuth from './middleware/basicAuth';
+import errorHandler from './middleware/errorHandler';
 
 import generalRoutes from './routes/general.route';
 import v1ExternalPlatformRoutes from './routes/v1/externalPlatform.route';
@@ -14,5 +15,7 @@ export default function createServer() {
   app.use('/v1/external-platform', v1ExternalPlatformRoutes);
   app.use('/v1/open-graph', v1OpenGraphRoutes);
 
+  // global error handler
+  app.use(errorHandler);
   return app;
 }
