@@ -30,6 +30,8 @@ export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
     return;
   }
 
+  logger.info(`Calendar Event OpenGraph Image Generation started for: ${id}`);
+
   try {
     const imageBuffer = await createMapScreenshot(position);
     const response = await uploadMapScreenshot(
@@ -46,6 +48,7 @@ export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
         },
       );
     }
+    logger.info('Calendar Event OpenGraph Image updated to DB');
   } catch (error) {
     logger.error('Failed to generate OG For Event:', error);
   }
@@ -57,6 +60,11 @@ export const competitionUnitWorker = async (
   const { idList = [], position } = job.data || {};
 
   try {
+    logger.info(
+      `Competition Unit OpenGraph Image Generation started for: ${idList.join(
+        ', ',
+      )}`,
+    );
     const imageBuffer = await createMapScreenshot(position);
 
     const data = await Promise.all(
@@ -77,6 +85,7 @@ export const competitionUnitWorker = async (
       fields: ['id', 'openGraphImage'],
       updateOnDuplicate: ['openGraphImage'],
     });
+    logger.info('Competition Unit OpenGraph Image updated to DB');
   } catch (error) {
     logger.error('Failed to generate OG For Competitions:', error);
   }
@@ -105,6 +114,7 @@ export const setup = (opts: Bull.QueueOptions) => {
     );
   });
   openGraphQueue.on('completed', (job) => {
+    job.remove();
     logger.info(`Generate OG Completed. JobID: [${job.id}]`);
   });
 };

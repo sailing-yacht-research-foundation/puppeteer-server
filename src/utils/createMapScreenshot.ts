@@ -67,8 +67,8 @@ export const createMapScreenshot = async (centerPosition: [number, number]) => {
     const y = image.bitmap.height - logo.bitmap.height - yMargin;
 
     image.composite(logo, x, y, {
-      mode: Jimp.BLEND_SCREEN,
-      opacitySource: 0.1,
+      mode: Jimp.BLEND_SOURCE_OVER,
+      opacitySource: 1,
       opacityDest: 1,
     });
     finalImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
