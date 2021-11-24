@@ -105,6 +105,7 @@ export const setup = (opts: Bull.QueueOptions) => {
     );
   });
   openGraphQueue.on('completed', (job) => {
+    job.remove();
     logger.info(`Generate OG Completed. JobID: [${job.id}]`);
   });
 };
