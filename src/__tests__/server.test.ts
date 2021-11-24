@@ -17,6 +17,7 @@ jest.mock('../utils/createMapScreenshot');
 
 describe('HTTP Server for Puppeteer Server', () => {
   let app: Express;
+
   beforeAll(() => {
     app = createServer();
   });
