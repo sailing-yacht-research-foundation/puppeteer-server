@@ -39,7 +39,7 @@ resource "aws_ecs_task_definition" "puppeteer_server_task" {
   [
     {
       "name": "puppeteer-server-task",
-      "image": "${aws_ecr_repository.puppeteer_server_ecr.repository_url}",
+      "image": "${aws_ecr_repository.puppeteer_server_ecr.repository_url}@${data.aws_ecr_image.puppeteer_service.image_digest}",
       "essential": true,
       "portMappings": [
         {
@@ -111,18 +111,18 @@ resource "aws_security_group" "service_security_group" {
 #   name               = "ecsTaskExecutionRole-PuppeteerServer"
 #   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 # }
-
+#
 # data "aws_iam_policy_document" "assume_role_policy" {
 #   statement {
 #     actions = ["sts:AssumeRole"]
-
+#
 #     principals {
 #       type        = "Service"
 #       identifiers = ["ecs-tasks.amazonaws.com"]
 #     }
 #   }
 # }
-
+#
 # resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
 #   role       = aws_iam_role.ecsTaskExecutionRole.name
 #   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
