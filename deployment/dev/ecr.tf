@@ -3,7 +3,7 @@ resource "aws_ecr_repository" "puppeteer_server_ecr" {
 }
 
 
-#data "aws_ecr_image" "puppeteer_service" {
-#  repository_name = "puppeteer-server"
-#  image_tag       = "latest"
-#}
+data "aws_ecr_image" "puppeteer_service" {
+  repository_name = "puppeteer-server"
+  image_tag       = "latest"
+}
