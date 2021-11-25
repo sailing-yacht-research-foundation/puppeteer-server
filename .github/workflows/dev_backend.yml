@@ -7,6 +7,7 @@ on:
 
 jobs:
   job1:
+    needs: job2
     name: Build image and Push to ECR
     runs-on: ubuntu-latest
 
@@ -45,7 +46,7 @@ jobs:
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
   job2:
-    needs: job1
+    #needs: job1
     name: Deploy to ECS
     runs-on: ubuntu-latest
 
