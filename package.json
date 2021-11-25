@@ -4,7 +4,8 @@
   "description": "Puppeteer Server",
   "main": "src/main.ts",
   "scripts": {
-    "build": "tsc --project ./",
+    "build": "rm -rf ./build && tsc --project ./ && npm run copy-files",
+    "copy-files": "cp -r ./src/assets/ ./build/assets/",
     "start": "node build/main.js",
     "dev": "tsnd --respawn --poll src/main.ts",
     "format": "prettier --write \"src/**/*.ts\"",
