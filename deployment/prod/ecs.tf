@@ -27,7 +27,7 @@ resource "aws_ecs_service" "puppeteer_server_service" {
   }
 
   network_configuration {
-    subnets          = ["subnet-0a7debe784cdde60f"]
+    subnets          = ["subnet-028dcac02c2daa0ff"]
     assign_public_ip = true
     security_groups  = [aws_security_group.service_security_group.id]
   }
@@ -39,7 +39,7 @@ resource "aws_ecs_task_definition" "puppeteer_server_task" {
   [
     {
       "name": "puppeteer-server-task",
-      "image": "${aws_ecr_repository.puppeteer_server_ecr.repository_url}@${data.aws_ecr_image.puppeteer_server.image_digest}",
+      "image": "${aws_ecr_repository.puppeteer_server_ecr.repository_url}",
       "essential": true,
       "portMappings": [
         {
@@ -49,7 +49,7 @@ resource "aws_ecs_task_definition" "puppeteer_server_task" {
       ],
       "environmentFiles": [
                {
-                   "value": "arn:aws:s3:::syrf-dev-env-variables/puppeteer-service.env",
+                   "value": "arn:aws:s3:::syrf-prod-env-variables/puppeteer-service.env",
                    "type": "s3"
                }
            ],
