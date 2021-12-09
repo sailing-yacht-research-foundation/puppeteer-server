@@ -23,3 +23,11 @@ export type YachtScoringImportedCrewDataToSave = {
   participantId: string;
   vesselParticipantId: string;
 };
+
+export type ImportingEventsJobData = {
+  source: string;
+  vesselParticipantGroupId: string;
+  vesselToSave: YachtScoringImportedVesselDataToSave[];
+  participantToSave: YachtScoringImportedParticipantDataToSave[];
+  crewToSave: YachtScoringImportedCrewDataToSave[];
+};

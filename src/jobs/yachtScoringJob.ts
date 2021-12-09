@@ -24,6 +24,7 @@ import {
   YachtScoringImportedVesselDataToSave,
 } from '../types/General-Type';
 import { fetchEventData, mapUserByEmail } from '../services/fetchDBData';
+import { queueImportEvent } from '../services/queueImportEvent';
 
 var yachtScoringQueue: Bull.Queue<YachtScoringJobData>;
 
@@ -120,7 +121,7 @@ export const importEventDataWorker = async (
   const { credentialId, ysEventId, calendarEventId } = job.data;
 
   let isSuccessfulScrape = false;
-  let isSuccessfulSaving = false;
+  let isSuccessfulQueueingImport = false;
   let yachts: YachtScoringYacht[] = [];
   if (!credentialId || !ysEventId) {
     logger.error(
@@ -227,70 +228,27 @@ export const importEventDataWorker = async (
 
         vesselToSave.push(vesselData);
       }
+
+      isSuccessfulQueueingImport = queueImportEvent(
+        {
+          source: externalServiceSources.yachtscoring,
+          vesselParticipantGroupId,
+          vesselToSave,
+          participantToSave,
+          crewToSave,
+        },
+        calendarEventId,
+      );
     } catch (error) {
       logger.error('Failed to fetch event data: ', error);
-    }
-
-    const transaction = await db.sequelize.transaction();
-    try {
-      await db.vessel.bulkCreate(
-        vesselToSave.map((row) => {
-          const { vesselParticipantId, ...vesselData } = row;
-          return vesselData;
-        }),
-        {
-          updateOnDuplicate: [
-            'vesselId',
-            'globalId',
-            'lengthInMeters',
-            'publicName',
-            'model',
-          ],
-          transaction,
-        },
-      );
-      await db.vesselParticipant.bulkCreate(
-        vesselToSave.map((row) => {
-          const { vesselParticipantId, id: vesselId } = row;
-          return {
-            id: vesselParticipantId,
-            vesselId,
-            vesselParticipantGroupId,
-          };
-        }),
-        {
-          updateOnDuplicate: ['vesselId', 'vesselParticipantGroupId'],
-          transaction,
-        },
-      );
-      await db.participant.bulkCreate(participantToSave, {
-        ignoreDuplicates: false,
-        updateOnDuplicate: [
-          'participantId',
-          'publicName',
-          'calendarEventId',
-          'userProfileId',
-        ],
-        transaction,
-      });
-
-      await db.vesselParticipantCrew.bulkCreate(crewToSave, {
-        updateOnDuplicate: ['participantId', 'vesselParticipantId'],
-        transaction,
-      });
-      await transaction.commit();
-      isSuccessfulSaving = true;
-    } catch (error) {
-      await transaction.rollback();
-      logger.error('Failed to save YacthScoring scraped data: ', error);
     }
   }
   logger.info(
     `YS Import Event Done, Scrape status: ${
       isSuccessfulScrape ? 'Success' : 'Failed'
-    } - Saving: ${isSuccessfulSaving ? 'Success' : 'Failed'}`,
+    } - Queueing import: ${isSuccessfulQueueingImport ? 'Success' : 'Failed'}`,
   );
-  return { isSuccessfulScrape, isSuccessfulSaving };
+  return { isSuccessfulScrape, isSuccessfulQueueingImport };
 };
 
 export const worker = async (
@@ -324,7 +282,6 @@ export const setup = (opts: Bull.QueueOptions) => {
     logger.error(`YachtScoring job failed. JobID: [${job.id}], Error: ${err}`);
   });
   yachtScoringQueue.on('completed', (job) => {
-    job.remove();
     logger.info(`Yachtscoring job completed. JobID: [${job.id}]`);
   });
 };
