@@ -9,6 +9,7 @@ import {
 export function queueImportEvent(
   data: {
     source: string;
+    calendarEventId: string;
     vesselParticipantGroupId: string;
     vesselToSave: YachtScoringImportedVesselDataToSave[];
     participantToSave: YachtScoringImportedParticipantDataToSave[];

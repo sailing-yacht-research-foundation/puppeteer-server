@@ -218,6 +218,7 @@ export const importEventDataWorker = async (
             calendarEventId,
             email: row.email,
             userProfileId: userProfile?.id,
+            isNew: existParticipant ? false : true,
           });
           crewToSave.push({
             id: existCrew?.id,
@@ -232,6 +233,7 @@ export const importEventDataWorker = async (
       isSuccessfulQueueingImport = queueImportEvent(
         {
           source: externalServiceSources.yachtscoring,
+          calendarEventId,
           vesselParticipantGroupId,
           vesselToSave,
           participantToSave,

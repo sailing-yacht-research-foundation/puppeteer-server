@@ -16,6 +16,7 @@ export type YachtScoringImportedParticipantDataToSave = {
   calendarEventId: string;
   email: string;
   userProfileId?: string;
+  isNew: boolean;
 };
 
 export type YachtScoringImportedCrewDataToSave = {
@@ -26,6 +27,7 @@ export type YachtScoringImportedCrewDataToSave = {
 
 export type ImportingEventsJobData = {
   source: string;
+  calendarEventId: string;
   vesselParticipantGroupId: string;
   vesselToSave: YachtScoringImportedVesselDataToSave[];
   participantToSave: YachtScoringImportedParticipantDataToSave[];
