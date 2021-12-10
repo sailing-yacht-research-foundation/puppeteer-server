@@ -57,14 +57,10 @@ export interface CompetitionUnitInterface extends Model {
   status?: string;
 }
 
-export enum ExternalServicesSourceEnum {
-  yachtscoring = 'YACHTSCORING',
-}
-
 export interface ExternalServiceCredentialInterface extends Model {
   id: string;
   userProfileId: string;
-  source: ExternalServicesSourceEnum;
+  source: string;
   userId: string;
   password: string;
 }

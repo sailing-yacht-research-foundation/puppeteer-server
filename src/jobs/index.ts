@@ -4,10 +4,12 @@ import logger from '../logger';
 import { createClient } from '../redis';
 import * as ogJob from './openGraph';
 import * as yachtScoringJob from './yachtScoringJob';
+import * as importingEventsJob from './importingEventsJob';
 
 export const registerWorkers = (opts: Bull.QueueOptions) => {
   ogJob.setup(opts);
   yachtScoringJob.setup(opts);
+  importingEventsJob.setup(opts);
 };
 
 export const registerBGWorkers = async () => {
