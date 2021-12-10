@@ -218,7 +218,7 @@ export const importEventDataWorker = async (
             calendarEventId,
             email: row.email,
             userProfileId: userProfile?.id,
-            isNew: existParticipant ? false : true,
+            isNew: !existParticipant,
           });
           crewToSave.push({
             id: existCrew?.id,
