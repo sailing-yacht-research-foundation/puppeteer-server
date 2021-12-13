@@ -175,12 +175,13 @@ export const importEventDataWorker = async (
 
       vesselParticipantGroupId = vpgId;
       for (let i = 0; i < yachts.length; i++) {
-        const { id, yachtName, yachtType, length, crews } = yachts[i];
+        const { id, sailNumber, yachtName, yachtType, length, crews } =
+          yachts[i];
 
         let vesselData: YachtScoringImportedVesselDataToSave = {
           id: uuidv4(),
           vesselId: id,
-          globalId: id,
+          globalId: sailNumber,
           lengthInMeters: length,
           publicName: yachtName,
           model: yachtType,
