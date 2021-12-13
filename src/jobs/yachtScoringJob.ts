@@ -23,7 +23,11 @@ import {
   YachtScoringImportedParticipantDataToSave,
   YachtScoringImportedVesselDataToSave,
 } from '../types/General-Type';
-import { fetchEventData, mapUserByEmail } from '../services/fetchDBData';
+import {
+  fetchEventData,
+  fetchVessels,
+  mapUserByEmail,
+} from '../services/fetchDBData';
 import { queueImportEvent } from '../services/queueImportEvent';
 
 var yachtScoringQueue: Bull.Queue<YachtScoringJobData>;
@@ -153,6 +157,9 @@ export const importEventDataWorker = async (
   }
 
   if (isSuccessfulScrape) {
+    const vesselOriginalIds = yachts.map((row) => {
+      return row.id;
+    });
     const vesselToSave: YachtScoringImportedVesselDataToSave[] = [];
     const participantToSave: YachtScoringImportedParticipantDataToSave[] = [];
     const crewToSave: YachtScoringImportedCrewDataToSave[] = [];
@@ -161,19 +168,20 @@ export const importEventDataWorker = async (
       const {
         vesselParticipantGroupId: vpgId,
         existingVesselParticipants,
-        existingVessels,
         existingCrews,
         existingParticipants,
       } = await fetchEventData(calendarEventId);
+      const existingVessels = await fetchVessels(vesselOriginalIds);
 
       vesselParticipantGroupId = vpgId;
       for (let i = 0; i < yachts.length; i++) {
-        const { id, yachtName, yachtType, length, crews } = yachts[i];
+        const { id, sailNumber, yachtName, yachtType, length, crews } =
+          yachts[i];
 
         let vesselData: YachtScoringImportedVesselDataToSave = {
           id: uuidv4(),
           vesselId: id,
-          globalId: id,
+          globalId: sailNumber,
           lengthInMeters: length,
           publicName: yachtName,
           model: yachtType,
