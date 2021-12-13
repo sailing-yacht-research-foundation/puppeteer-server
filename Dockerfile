@@ -16,4 +16,4 @@ COPY package*.json ./
 RUN npm install --production --silent
 COPY --from=builder /usr/src/app/build/ build/
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npm run db:migrate && npm start"]
