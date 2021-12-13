@@ -23,16 +23,6 @@ export async function fetchEventData(calendarEventId: string) {
     },
     raw: true,
   });
-  const existingVessels = await db.vessel.findAll({
-    where: {
-      id: {
-        [Op.in]: existingVesselParticipants.map((row) => {
-          return row.vesselId;
-        }),
-      },
-    },
-    raw: true,
-  });
   const existingParticipants = await db.participant.findAll({
     where: {
       calendarEventId,
@@ -53,10 +43,21 @@ export async function fetchEventData(calendarEventId: string) {
   return {
     vesselParticipantGroupId: vpgData.id,
     existingVesselParticipants,
-    existingVessels,
     existingParticipants,
     existingCrews,
   };
+}
+
+export async function fetchVessels(originalIds: string[]) {
+  const existingVessels = await db.vessel.findAll({
+    where: {
+      vesselId: {
+        [Op.in]: originalIds,
+      },
+    },
+    raw: true,
+  });
+  return existingVessels;
 }
 
 export async function mapUserByEmail(emails: string[]) {
