@@ -21,7 +21,6 @@ export const uploadMapScreenshot = async (
       Bucket: ogBucket,
       Key: `public/${fileName}`,
       Body: imageBuffer,
-      ContentEncoding: 'base64',
       ContentType: 'image/png',
     })
     .promise();
