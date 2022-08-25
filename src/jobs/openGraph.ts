@@ -5,6 +5,7 @@ import { bullQueues } from '../models/syrf-schema/enums';
 import { uploadMapScreenshot } from '../externalServices/s3';
 import { createMapScreenshot } from '../utils/createMapScreenshot';
 import logger from '../logger';
+import jimp from 'jimp';
 
 type CompetitionOGJobData = {
   type: 'competition-unit';
@@ -20,6 +21,8 @@ type OGJobData = EventOGJobData | CompetitionOGJobData;
 
 var openGraphQueue: Bull.Queue<OGJobData>;
 
+const THUMBNAIL_WIDTH = 150;
+
 export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
   const { id, position } = job.data || {};
 
@@ -34,13 +37,21 @@ export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
 
   try {
     const imageBuffer = await createMapScreenshot(position);
-    const response = await uploadMapScreenshot(
-      imageBuffer,
-      `calendar-event/${id}.jpg`,
-    );
-    if (response) {
+    const image = await jimp.read(imageBuffer);
+    const thumbnailBuffer = await image
+      .resize(THUMBNAIL_WIDTH, jimp.AUTO, jimp.RESIZE_BILINEAR)
+      .getBufferAsync(jimp.MIME_JPEG);
+
+    const [response] = await Promise.allSettled([
+      uploadMapScreenshot(imageBuffer, `calendar-event/${id}.jpg`),
+      uploadMapScreenshot(
+        thumbnailBuffer,
+        `calendar-event/${id}_thumbnail.jpg`,
+      ),
+    ]);
+    if (response.status === 'fulfilled' && response?.value?.Location) {
       await db.calendarEvent.update(
-        { openGraphImage: response.Location },
+        { openGraphImage: response.value.Location },
         {
           where: {
             id,
