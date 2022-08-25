@@ -10,6 +10,6 @@ module.exports = {
     '<rootDir>/src/externalServices',
     '<rootDir>/src/types',
   ],
-  modulePathIgnorePatterns: ['<rootDir>/build/'],
+  modulePathIgnorePatterns: ['<rootDir>/build/', '<rootDir>/src/models'],
   setupFiles: ['dotenv/config'],
 };
