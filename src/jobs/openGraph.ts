@@ -23,6 +23,13 @@ var openGraphQueue: Bull.Queue<OGJobData>;
 
 const THUMBNAIL_WIDTH = 150;
 
+export const createThumbnail = async (buffer: Buffer) => {
+  const image = await jimp.read(buffer);
+  return await image
+    .resize(THUMBNAIL_WIDTH, jimp.AUTO, jimp.RESIZE_BILINEAR)
+    .getBufferAsync(jimp.MIME_JPEG);
+};
+
 export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
   const { id, position } = job.data || {};
 
@@ -37,10 +44,7 @@ export const eventWorker = async (job: Bull.Job<EventOGJobData>) => {
 
   try {
     const imageBuffer = await createMapScreenshot(position);
-    const image = await jimp.read(imageBuffer);
-    const thumbnailBuffer = await image
-      .resize(THUMBNAIL_WIDTH, jimp.AUTO, jimp.RESIZE_BILINEAR)
-      .getBufferAsync(jimp.MIME_JPEG);
+    const thumbnailBuffer = await createThumbnail(imageBuffer);
 
     const [response] = await Promise.allSettled([
       uploadMapScreenshot(imageBuffer, `calendar-event/${id}.jpg`),
@@ -77,15 +81,19 @@ export const competitionUnitWorker = async (
       )}`,
     );
     const imageBuffer = await createMapScreenshot(position);
+    const thumbnailBuffer = await createThumbnail(imageBuffer);
 
     const data = await Promise.all(
       // Loop for multiple competitions with same course
       // Note: Intended to separate the image files for each competition even if the image is identical
       idList.map(async (id) => {
-        const response = await uploadMapScreenshot(
-          imageBuffer,
-          `competition/${id}.jpg`,
-        );
+        const [response] = await Promise.all([
+          uploadMapScreenshot(imageBuffer, `competition/${id}.jpg`),
+          uploadMapScreenshot(
+            thumbnailBuffer,
+            `competition/${id}_thumbnail.jpg`,
+          ),
+        ]);
         return {
           id,
           openGraphImage: response?.Location,
