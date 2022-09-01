@@ -1,6 +1,6 @@
 {
   "name": "puppeteer-server",
-  "version": "1.0.3",
+  "version": "1.0.3-1.1",
   "description": "Puppeteer Server",
   "main": "src/main.ts",
   "scripts": {
