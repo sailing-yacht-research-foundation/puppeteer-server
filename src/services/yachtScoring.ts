@@ -17,7 +17,7 @@ const YS_LOGIN_INPUT_PASS = 'loginpass';
 const YS_LOGIN_TIMEOUT = 10000;
 const YS_REDIRECT_TIMEOUT = 5000;
 const YS_MAIN_TABLE_LOGGED_IN_SELECTOR =
-  'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr';
+  'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr:nth-child(1) > td > table > tbody > tr';
 const YS_YACHT_TABLE_SELECTOR =
   'body > table:nth-child(2) > tbody > tr:nth-child(3) > td > table > tbody > tr > td > table > tbody > tr > td > table:nth-child(2) > tbody > tr';
 const YS_CREW_TABLE_SELECTOR =
@@ -102,6 +102,7 @@ const fetchEvents = async (user: string, password: string) => {
     if (!isLoggedIn) {
       throw new Error('Failed to fetch events - Login Failed');
     }
+
     const mainTableRows = await page.$$eval(
       YS_MAIN_TABLE_LOGGED_IN_SELECTOR,
       (rows) => {
@@ -114,10 +115,10 @@ const fetchEvents = async (user: string, password: string) => {
 
     events = mainTableRows
       .filter((row) => {
-        return !(row.length < 4 || !row[0].includes('Event_ID='));
+        return !(row.length < 4 || !row[2].includes('Event_ID='));
       })
       .map((row) => {
-        const $ = cheerio.load(row[0]);
+        const $ = cheerio.load(row[2]);
         return {
           link: $('a').attr('href'),
           eventId: $('a')
