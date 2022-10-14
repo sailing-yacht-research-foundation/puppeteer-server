@@ -21,16 +21,19 @@ const mockLoginSuccessWithEventsArray = [
       '\t<hr size="1" style="color: Navy" noshade="">\n' +
       '\t',
   ],
+  ['<hr size="1" style="color: Navy" noshade="">'],
   [
-    '<dd><b>Event Name</b></dd>',
     '<b>Event Date</b>',
+    '<b>eID</b>',
+    '<b>Event Name</b>',
     '<b>Event Status</b>',
     '<b>Login Status</b>',
   ],
   ['<hr size="1" style="color: Navy" noshade="">'],
   [
-    '<dd><li><a href="./admin_main.cfm?Event_ID=12987">Spirit of Bermuda Charity Rally</a></li></dd>',
     '&nbsp; 06/Jul/2020 &nbsp;',
+    '<a href="./admin_main.cfm?Event_ID=12987">12987</a>',
+    '<li><a href="./admin_main.cfm?Event_ID=12987">Spirit of Bermuda Charity Rally</a></li>',
     '&nbsp; <i style="color: green">Active</i>&nbsp;',
     '&nbsp; <i style="color: green">Active</i>&nbsp;',
   ],
